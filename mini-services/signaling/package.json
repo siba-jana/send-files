@@ -1,0 +1,15 @@
+{
+  "name": "ilovedoc-signaling",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "ilovedoc.org — socket.io signaling mini-service (transfer rooms, offer/answer/ICE relay, limits, retention cleanup)",
+  "scripts": {
+    "dev": "bun --hot index.ts",
+    "start": "bun index.ts"
+  },
+  "dependencies": {
+    "socket.io": "^4.8.3",
+    "zod": "^4"
+  }
+}

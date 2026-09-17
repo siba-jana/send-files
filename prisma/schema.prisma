@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// A temporary peer-to-peer transfer session. Stores ONLY metadata —
+// file bytes never touch the server during normal P2P transfers.
+model Transfer {
+  id                String   @id @default(cuid())
+  // High-entropy public token used in share links (/?t=<publicToken>)
+  publicToken       String   @unique
+  // sha256(code + pepper) of the 6-digit share code
+  shareCodeHash     String   @unique
+  // sha256 of the secret sender token (grants sender role in signaling)
+  senderTokenHash   String   @unique
+  // sha256 of the secret receiver token (grants receiver role in signaling)
+  receiverTokenHash String
+  // waiting | active | completed | cancelled | expired
+  status            String   @default("waiting")
+  senderName        String?
+  // scrypt(password, salt) — never plaintext
+  passwordHash      String?
+  passwordSalt      String?
+  passwordProtected Boolean  @default(false)
+  maxDownloads      Int      @default(5)
+  downloads         Int      @default(0)
+  createdAt         DateTime @default(now())
+  expiresAt         DateTime
+  updatedAt         DateTime @updatedAt
+
+  files  TransferFile[]
+  events TransferEvent[]
+
+  @@index([expiresAt])
+  @@index([status])
+}
+
+model TransferFile {
+  id         String  @id @default(cuid())
+  transferId String
+  position   Int
+  fileName   String
+  mimeType   String  @default("application/octet-stream")
+  size       BigInt
+  sha256     String?
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  @@index([transferId])
+}
+
+// Lightweight audit log of lifecycle events (no file content, no secrets).
+model TransferEvent {
+  id         String   @id @default(cuid())
+  transferId String
+  eventType  String
+  metadata   String?
+  createdAt  DateTime @default(now())
+  transfer   Transfer @relation(fields: [transferId], references: [id], onDelete: Cascade)
+
+  @@index([transferId])
+  @@index([createdAt])
+}

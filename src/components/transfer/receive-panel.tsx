@@ -1,0 +1,716 @@
+"use client";
+
+import {
+  useEffect,
+  useState,
+  useSyncExternalStore,
+  type ClipboardEvent,
+  type FormEvent,
+  type KeyboardEvent,
+} from "react";
+import { toast } from "sonner";
+import {
+  ArrowRight,
+  CircleCheckBig,
+  CircleX,
+  Clock,
+  Download,
+  HardDrive,
+  Link2,
+  LoaderCircle,
+  Lock,
+  RotateCcw,
+  ShieldCheck,
+  TriangleAlert,
+  User,
+  WifiOff,
+} from "lucide-react";
+
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { cn } from "@/lib/utils";
+import {
+  extractToken,
+  normalizeCode,
+  useReceiveTransfer,
+} from "@/hooks/use-receive";
+import { formatBytes } from "@/lib/transfer/stats";
+import { ConnectionSteps, ProgressPanel } from "./progress-panel";
+import { FileIcon } from "./file-icon";
+
+/** Imperative API the TransferWidget uses for share-link / ?code= entry. */
+export interface ReceiveControllerApi {
+  startByToken: (token: string) => void;
+  startByCode: (code: string) => void;
+}
+
+export interface ReceivePanelProps {
+  registerController?: (api: ReceiveControllerApi) => void;
+}
+
+const emptySubscribe = () => () => {};
+
+/** false during SSR + hydration, true afterwards (no effect setState). */
+function useIsHydrated(): boolean {
+  return useSyncExternalStore(
+    emptySubscribe,
+    () => true,
+    () => false,
+  );
+}
+
+function formatRemaining(ms: number): string {
+  if (ms <= 0) return "Expired";
+  const totalSeconds = Math.floor(ms / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+  if (hours > 0) return `${hours} h ${minutes.toString().padStart(2, "0")} min`;
+  if (minutes > 0) return `${minutes} min ${seconds.toString().padStart(2, "0")} s`;
+  return `${seconds} s`;
+}
+
+/** Live "Expires in 23 h 59 min" label. Starts null to avoid SSR mismatch. */
+function useCountdown(expiresAt: string | null | undefined): string | null {
+  const [snapshot, setSnapshot] = useState<{
+    expiresAt: string;
+    label: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!expiresAt) return;
+    const target = new Date(expiresAt).getTime();
+    const tick = () => {
+      setSnapshot({ expiresAt, label: formatRemaining(target - Date.now()) });
+    };
+    tick();
+    const id = window.setInterval(tick, 1000);
+    return () => window.clearInterval(id);
+  }, [expiresAt]);
+
+  return snapshot && snapshot.expiresAt === expiresAt
+    ? snapshot.label
+    : null;
+}
+
+export function ReceivePanel({ registerController }: ReceivePanelProps) {
+  const {
+    supported,
+    fsSupported,
+    phase,
+    meta,
+    progress,
+    error,
+    unlocked,
+    startByToken,
+    startByCode,
+    submitPassword,
+    accept,
+    decline,
+    cancel,
+    reset,
+    downloadFile,
+    downloadAll,
+  } = useReceiveTransfer();
+
+  // Capability probes are read post-hydration (useSyncExternalStore) so the
+  // server-rendered HTML and the first client render stay identical.
+  const hydrated = useIsHydrated();
+  const unsupported = hydrated && !supported;
+  const diskAvailable = hydrated && fsSupported;
+
+  const [code, setCode] = useState("");
+  const [linkValue, setLinkValue] = useState("");
+  const [password, setPassword] = useState("");
+  const [saveToDisk, setSaveToDisk] = useState(true);
+
+  const countdown = useCountdown(
+    phase === "confirm" || phase === "unlocking" ? meta?.expiresAt : null,
+  );
+
+  // Expose lookup entry points to the orchestrating widget (share links etc.).
+  useEffect(() => {
+    registerController?.({
+      startByToken: (token: string) => void startByToken(token),
+      startByCode: (value: string) => void startByCode(value),
+    });
+  }, [registerController, startByToken, startByCode]);
+
+  const submitCode = () => {
+    if (normalizeCode(code).length === 6) void startByCode(code);
+  };
+
+  const submitLink = (e: FormEvent) => {
+    e.preventDefault();
+    const token = extractToken(linkValue);
+    if (token) {
+      void startByToken(token);
+    } else {
+      toast.error("That doesn't look like a transfer link.");
+    }
+  };
+
+  const handleCodeKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      submitCode();
+    }
+  };
+
+  const handleCodePaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    const text = e.clipboardData.getData("text");
+    if (!text) return;
+    e.preventDefault();
+    const digits = normalizeCode(text).slice(0, 6);
+    if (digits) setCode(digits);
+  };
+
+  // ------------------------------------------------------------- unsupported
+
+  if (unsupported) {
+    return (
+      <Card className="rounded-2xl border-destructive/40">
+        <CardContent className="p-6">
+          <Alert variant="destructive">
+            <TriangleAlert />
+            <AlertTitle>Browser not supported</AlertTitle>
+            <AlertDescription>
+              Your browser does not support direct browser-to-browser
+              transfers. Try the latest Chrome, Edge, Firefox or Safari.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ------------------------------------------------------------- lookup states
+
+  if (phase === "resolving") {
+    return (
+      <Card className="rounded-2xl">
+        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+          <LoaderCircle
+            aria-hidden="true"
+            className="size-10 animate-spin text-rose-600 dark:text-rose-500"
+          />
+          <h3 className="mt-5 text-lg font-semibold">Looking up transfer…</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Checking the code with the transfer service.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ---------------------------------------------------- confirm | unlocking
+
+  if (phase === "confirm" || phase === "unlocking") {
+    const unlocking = phase === "unlocking";
+    const totalLabel = meta
+      ? `${meta.fileCount} file${meta.fileCount === 1 ? "" : "s"} • ${formatBytes(meta.totalBytes)}`
+      : "";
+    return (
+      <Card className="gap-0 rounded-2xl py-0">
+        <CardContent className="p-6 sm:p-8">
+          <div className="text-center">
+            <h3 className="text-lg font-semibold">Files ready to receive</h3>
+            <p className="mt-1.5 inline-flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+              <User aria-hidden="true" className="size-4" />
+              From: {meta?.senderName?.trim() || "Anonymous sender"}
+            </p>
+          </div>
+
+          <div className="mt-6">
+            {meta?.files ? (
+              <>
+                <ul
+                  aria-label="Files in this transfer"
+                  className="max-h-72 divide-y overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:transparent"
+                >
+                  {meta.files.map((file, i) => (
+                    <li key={`${i}-${file.name}`} className="flex items-center gap-3 py-2.5 first:pt-0">
+                      <FileIcon name={file.name} mimeType={file.mimeType} />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium" title={file.name}>
+                          {file.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground tabular-nums">
+                          {formatBytes(file.size)}
+                        </p>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <div className="mt-1 flex items-center justify-between border-t pt-3">
+                  <p className="text-sm text-muted-foreground tabular-nums">
+                    Total: {totalLabel}
+                  </p>
+                  <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Clock aria-hidden="true" className="size-3.5" />
+                    {countdown ? `Expires in ${countdown}` : "Expires soon"}
+                  </p>
+                </div>
+              </>
+            ) : (
+              <div className="rounded-2xl border border-dashed p-6 text-center">
+                <Lock
+                  aria-hidden="true"
+                  className="mx-auto size-8 text-muted-foreground"
+                />
+                <p className="mt-3 font-medium tabular-nums">{totalLabel}</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  File names are hidden until you unlock this transfer.
+                </p>
+                <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Clock aria-hidden="true" className="size-3.5" />
+                  {countdown ? `Expires in ${countdown}` : "Expires soon"}
+                </p>
+              </div>
+            )}
+          </div>
+
+          {!unlocked ? (
+            <form
+              className="mt-6 space-y-3"
+              onSubmit={(e) => {
+                e.preventDefault();
+                void submitPassword(password);
+              }}
+            >
+              <div className="space-y-2">
+                <Label
+                  htmlFor="transfer-password-input"
+                  className="flex items-center gap-1.5 text-sm font-medium"
+                >
+                  <Lock aria-hidden="true" className="size-4 text-muted-foreground" />
+                  Enter the transfer password
+                </Label>
+                <Input
+                  id="transfer-password-input"
+                  type="password"
+                  value={password}
+                  autoComplete="current-password"
+                  placeholder="Password"
+                  className="h-11 rounded-xl"
+                  autoFocus
+                  onChange={(e) => setPassword(e.target.value)}
+                />
+              </div>
+              {error && (
+                <p className="text-sm text-destructive" role="alert">
+                  {error}
+                </p>
+              )}
+              <div className="flex flex-col gap-2.5 sm:flex-row-reverse">
+                <Button
+                  type="submit"
+                  disabled={unlocking || password.length === 0}
+                  className="h-11 flex-1 rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+                >
+                  {unlocking ? (
+                    <>
+                      <LoaderCircle aria-hidden="true" className="animate-spin" />
+                      Unlocking…
+                    </>
+                  ) : (
+                    <>
+                      <Lock aria-hidden="true" />
+                      Unlock
+                    </>
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 flex-1 rounded-xl"
+                  onClick={decline}
+                >
+                  Back
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div className="mt-6 space-y-4">
+              {diskAvailable && (
+                <div className="flex items-start justify-between gap-3 rounded-xl border p-3.5">
+                  <div className="flex items-start gap-2.5">
+                    <HardDrive
+                      aria-hidden="true"
+                      className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+                    />
+                    <div>
+                      <Label
+                        htmlFor="save-disk-switch"
+                        className="text-sm font-medium"
+                      >
+                        Save directly to disk{" "}
+                        <span className="font-normal text-muted-foreground">
+                          (recommended)
+                        </span>
+                      </Label>
+                      <p className="mt-0.5 text-xs text-muted-foreground">
+                        Streams files straight to a folder you pick — no memory
+                        limits, even for huge transfers.
+                      </p>
+                    </div>
+                  </div>
+                  <Switch
+                    id="save-disk-switch"
+                    checked={saveToDisk}
+                    onCheckedChange={setSaveToDisk}
+                  />
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2.5 sm:flex-row-reverse">
+                <Button
+                  type="button"
+                  size="lg"
+                  className="h-12 flex-1 rounded-xl bg-rose-600 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+                  onClick={() => void accept(diskAvailable ? saveToDisk : false)}
+                >
+                  <Download aria-hidden="true" />
+                  Accept Files
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 flex-1 rounded-xl sm:max-w-36"
+                  onClick={decline}
+                >
+                  Back
+                </Button>
+              </div>
+            </div>
+          )}
+
+          <p className="mt-5 text-center text-xs leading-relaxed text-muted-foreground">
+            Files stream directly from the sender&apos;s browser to yours — they
+            are never stored on our servers. Every file is SHA-256 verified on
+            arrival.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ------------------------------------------------------------- connecting
+
+  if (phase === "connecting") {
+    return (
+      <Card className="rounded-2xl">
+        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+          <LoaderCircle
+            aria-hidden="true"
+            className="size-10 animate-spin text-rose-600 dark:text-rose-500"
+          />
+          <h3 className="mt-5 text-lg font-semibold">Connecting to sender…</h3>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Setting up a secure channel between the two browsers. This usually
+            takes a few seconds.
+          </p>
+          <ConnectionSteps
+            steps={["Offer received", "Answer sent", "Secure channel opening"]}
+            className="mt-7"
+          />
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ------------------------------------------------- transferring | reconnecting
+
+  if (phase === "transferring" || phase === "reconnecting") {
+    return (
+      <div className="space-y-4">
+        {phase === "reconnecting" && (
+          <Alert className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+            <WifiOff aria-hidden="true" />
+            <AlertDescription className="text-amber-900 dark:text-amber-200">
+              Connection interrupted — reconnecting… Keep both browsers open.
+            </AlertDescription>
+          </Alert>
+        )}
+        {progress && <ProgressPanel progress={progress} variant="receiving" />}
+        <Button
+          type="button"
+          variant="outline"
+          className="h-11 w-full rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+          onClick={() => void cancel("Stopped by recipient")}
+        >
+          <CircleX aria-hidden="true" />
+          Stop Receiving
+        </Button>
+      </div>
+    );
+  }
+
+  // ------------------------------------------------------------- completed
+
+  if (phase === "completed") {
+    const results = progress?.results ?? [];
+    const totalBytesReceived = results.reduce((acc, r) => acc + r.size, 0);
+    const downloadable = results.filter((r) => r.blob);
+
+    return (
+      <Card className="gap-0 rounded-2xl py-0">
+        <CardContent className="p-6 sm:p-8">
+          <div className="flex flex-col items-center text-center">
+            <CircleCheckBig
+              aria-hidden="true"
+              className="size-12 text-emerald-600 dark:text-emerald-500"
+            />
+            <h3 className="mt-4 text-xl font-semibold">
+              Files received successfully
+            </h3>
+            <p className="mt-1.5 text-sm text-muted-foreground tabular-nums">
+              {results.length > 0
+                ? `${results.length} file${results.length === 1 ? "" : "s"} • ${formatBytes(totalBytesReceived)}`
+                : meta
+                  ? `${meta.fileCount} file${meta.fileCount === 1 ? "" : "s"}`
+                  : ""}
+            </p>
+          </div>
+
+          {results.length > 0 ? (
+            <ul
+              aria-label="Received files"
+              className="mt-6 max-h-72 divide-y overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:transparent"
+            >
+              {results.map((item, i) => (
+                <li
+                  key={`${i}-${item.name}`}
+                  className="flex items-center gap-3 py-2.5 first:pt-0"
+                >
+                  <FileIcon name={item.name} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium" title={item.name}>
+                      {item.name}
+                    </p>
+                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+                      <span className="tabular-nums">{formatBytes(item.size)}</span>
+                      {item.sha256 ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              className="inline-flex cursor-default items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400"
+                              title={`SHA-256: ${item.sha256}`}
+                            >
+                              <ShieldCheck aria-hidden="true" className="size-3.5" />
+                              SHA-256 verified ✓
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent
+                            side="top"
+                            className="max-w-64 break-all font-mono text-[10px]"
+                          >
+                            SHA-256 {item.sha256.slice(0, 16)}…
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : (
+                        <span>Received</span>
+                      )}
+                    </p>
+                  </div>
+                  {item.savedToDisk ? (
+                    <Badge className="shrink-0 gap-1 border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
+                      <HardDrive aria-hidden="true" className="size-3" />
+                      Saved to disk
+                    </Badge>
+                  ) : (
+                    item.blob && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-9 shrink-0 rounded-lg"
+                        onClick={() => downloadFile(item)}
+                      >
+                        <Download aria-hidden="true" />
+                        Download
+                      </Button>
+                    )
+                  )}
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="mt-4 text-center text-sm text-muted-foreground">
+              The sender cancelled before any files finished.
+            </p>
+          )}
+
+          <Separator className="my-5" />
+
+          <div className="flex flex-col gap-2.5">
+            {downloadable.length > 0 && (
+              <Button
+                type="button"
+                variant="outline"
+                className="h-11 w-full rounded-xl"
+                onClick={() => downloadAll(results)}
+              >
+                <Download aria-hidden="true" />
+                Download All{downloadable.length > 1 ? ` (${downloadable.length})` : ""}
+              </Button>
+            )}
+            <Button
+              type="button"
+              className="h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+              onClick={reset}
+            >
+              <RotateCcw aria-hidden="true" />
+              Receive More Files
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ----------------------------------------------------- cancelled | failed
+
+  if (phase === "cancelled") {
+    return (
+      <Card className="rounded-2xl">
+        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+          <CircleX aria-hidden="true" className="size-12 text-muted-foreground" />
+          <h3 className="mt-4 text-xl font-semibold">Transfer cancelled</h3>
+          <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+            {error ?? "The transfer was stopped before it finished."}
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-7 h-11 w-full rounded-xl sm:w-auto sm:px-8"
+            onClick={reset}
+          >
+            <RotateCcw aria-hidden="true" />
+            Enter Another Code
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (phase === "failed") {
+    return (
+      <Card className="rounded-2xl">
+        <CardContent className="p-6 sm:p-8">
+          <Alert variant="destructive">
+            <TriangleAlert />
+            <AlertTitle>Couldn&apos;t receive this transfer</AlertTitle>
+            <AlertDescription>
+              {error ?? "Something went wrong while looking up the transfer."}
+            </AlertDescription>
+          </Alert>
+          <Button
+            type="button"
+            className="mt-5 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+            onClick={reset}
+          >
+            <RotateCcw aria-hidden="true" />
+            Try Again
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ------------------------------------------------------------- idle
+
+  return (
+    <Card className="gap-0 rounded-2xl py-0">
+      <CardContent className="p-6 sm:p-8">
+        <div className="text-center">
+          <h3 className="text-lg font-semibold">Receive files</h3>
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Enter the 6-digit code the sender shared with you.
+          </p>
+        </div>
+
+        <div className="mt-6 space-y-3">
+          <Label htmlFor="transfer-code-input" className="sr-only">
+            Transfer code
+          </Label>
+          <input
+            id="transfer-code-input"
+            value={code}
+            onChange={(e) => setCode(normalizeCode(e.target.value).slice(0, 6))}
+            onKeyDown={handleCodeKeyDown}
+            onPaste={handleCodePaste}
+            type="text"
+            inputMode="numeric"
+            autoComplete="off"
+            maxLength={6}
+            placeholder="••••••"
+            aria-label="Transfer code"
+            className="h-16 w-full rounded-2xl border-2 bg-background text-center text-3xl font-semibold tracking-[0.5em] ps-[0.25em] tabular-nums transition-colors outline-none placeholder:text-muted-foreground/50 focus-visible:border-rose-500 focus-visible:ring-4 focus-visible:ring-rose-500/20 dark:focus-visible:border-rose-400"
+          />
+          <Button
+            type="button"
+            size="lg"
+            disabled={normalizeCode(code).length !== 6}
+            onClick={submitCode}
+            className="h-12 w-full rounded-xl bg-rose-600 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+          >
+            <Download aria-hidden="true" />
+            Receive Files
+          </Button>
+        </div>
+
+        <div className="my-6 flex items-center gap-3" aria-hidden="true">
+          <Separator className="flex-1" />
+          <span className="text-xs text-muted-foreground">or</span>
+          <Separator className="flex-1" />
+        </div>
+
+        <form onSubmit={submitLink} className="space-y-3">
+          <Label
+            htmlFor="transfer-link-input"
+            className="flex items-center gap-1.5 text-sm font-medium"
+          >
+            <Link2 aria-hidden="true" className="size-4 text-muted-foreground" />
+            Have a sharing link?
+          </Label>
+          <div className="flex flex-col gap-2.5 sm:flex-row">
+            <Input
+              id="transfer-link-input"
+              type="text"
+              value={linkValue}
+              placeholder="Paste the link that starts with the site address"
+              className="h-11 flex-1 rounded-xl"
+              onChange={(e) => setLinkValue(e.target.value)}
+            />
+            <Button
+              type="submit"
+              variant="outline"
+              disabled={!linkValue.trim()}
+              className="h-11 shrink-0 rounded-xl"
+            >
+              Open Transfer Link
+              <ArrowRight aria-hidden="true" />
+            </Button>
+          </div>
+        </form>
+
+        <p className="mt-5 text-center text-xs leading-relaxed text-muted-foreground">
+          Ask the sender for a 6-digit code or a link. Files arrive straight
+          from their browser, SHA-256 verified.
+        </p>
+      </CardContent>
+    </Card>
+  );
+}

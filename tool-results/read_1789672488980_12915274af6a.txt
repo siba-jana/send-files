@@ -1,0 +1,861 @@
+     1→"use client";
+     2→
+     3→import {
+     4→  useCallback,
+     5→  useEffect,
+     6→  useRef,
+     7→  useState,
+     8→  type DragEvent,
+     9→  type ChangeEvent,
+    10→  type KeyboardEvent,
+    11→} from "react";
+    12→import dynamic from "next/dynamic";
+    13→import { toast } from "sonner";
+    14→import {
+    15→  CircleCheckBig,
+    16→  CircleX,
+    17→  Clock,
+    18→  CloudUpload,
+    19→  Copy,
+    20→  FolderUp,
+    21→  Hourglass,
+    22→  Link2,
+    23→  LoaderCircle,
+    24→  Lock,
+    25→  MonitorSmartphone,
+    26→  QrCode,
+    27→  RotateCcw,
+    28→  Settings2,
+    29→  ShieldCheck,
+    30→  TriangleAlert,
+    31→  Upload,
+    32→  WifiOff,
+    33→  X,
+    34→} from "lucide-react";
+    35→
+    36→import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+    37→import { Button } from "@/components/ui/button";
+    38→import {
+    39→  Card,
+    40→  CardContent,
+    41→} from "@/components/ui/card";
+    42→import {
+    43→  Collapsible,
+    44→  CollapsibleContent,
+    45→  CollapsibleTrigger,
+    46→} from "@/components/ui/collapsible";
+    47→import { Input } from "@/components/ui/input";
+    48→import { Label } from "@/components/ui/label";
+    49→import {
+    50→  Select,
+    51→  SelectContent,
+    52→  SelectItem,
+    53→  SelectTrigger,
+    54→  SelectValue,
+    55→} from "@/components/ui/select";
+    56→import { Separator } from "@/components/ui/separator";
+    57→import { Switch } from "@/components/ui/switch";
+    58→import { cn } from "@/lib/utils";
+    59→import { useSendTransfer } from "@/hooks/use-send";
+    60→import { formatBytes } from "@/lib/transfer/stats";
+    61→import { ConnectionSteps, ProgressPanel } from "./progress-panel";
+    62→import { FileIcon } from "./file-icon";
+    63→
+    64→const QrDialog = dynamic(() => import("./qr-dialog"), { ssr: false });
+    65→
+    66→const EXPIRY_OPTIONS = [
+    67→  { value: "1", label: "1 hour" },
+    68→  { value: "6", label: "6 hours" },
+    69→  { value: "24", label: "24 hours" },
+    70→  { value: "72", label: "3 days" },
+    71→  { value: "168", label: "7 days" },
+    72→] as const;
+    73→
+    74→const LARGE_TRANSFER_BYTES = 8 * 1024 * 1024 * 1024; // 8 GB
+    75→
+    76→/** "482917" → "482 917" */
+    77→function formatCode(code: string): string {
+    78→  return code.length === 6 ? `${code.slice(0, 3)} ${code.slice(3)}` : code;
+    79→}
+    80→
+    81→async function copyText(text: string, successMessage: string): Promise<void> {
+    82→  try {
+    83→    if (navigator.clipboard?.writeText) {
+    84→      await navigator.clipboard.writeText(text);
+    85→    } else {
+    86→      throw new Error("Clipboard API unavailable");
+    87→    }
+    88→    toast.success(successMessage);
+    89→  } catch {
+    90→    try {
+    91→      const textarea = document.createElement("textarea");
+    92→      textarea.value = text;
+    93→      textarea.style.position = "fixed";
+    94→      textarea.style.opacity = "0";
+    95→      document.body.appendChild(textarea);
+    96→      textarea.select();
+    97→      document.execCommand("copy");
+    98→      textarea.remove();
+    99→      toast.success(successMessage);
+   100→    } catch {
+   101→      toast.error("Couldn't copy — please copy it manually.");
+   102→    }
+   103→  }
+   104→}
+   105→
+   106→/** Live "Expires in 23 h 59 min" label. Starts null to avoid SSR mismatch. */
+   107→function useCountdown(expiresAt: string | null | undefined): string | null {
+   108→  const [label, setLabel] = useState<string | null>(null);
+   109→
+   110→  useEffect(() => {
+   111→    if (!expiresAt) {
+   112→      setLabel(null);
+   113→      return;
+   114→    }
+   115→    const target = new Date(expiresAt).getTime();
+   116→    const tick = () => {
+   117→      const remaining = target - Date.now();
+   118→      if (remaining <= 0) {
+   119→        setLabel("Expired");
+   120→        return;
+   121→      }
+   122→      const totalSeconds = Math.floor(remaining / 1000);
+   123→      const hours = Math.floor(totalSeconds / 3600);
+   124→      const minutes = Math.floor((totalSeconds % 3600) / 60);
+   125→      const seconds = totalSeconds % 60;
+   126→      setLabel(
+   127→        hours > 0
+   128→          ? `${hours} h ${minutes.toString().padStart(2, "0")} min`
+   129→          : minutes > 0
+   130→            ? `${minutes} min ${seconds.toString().padStart(2, "0")} s`
+   131→            : `${seconds} s`,
+   132→      );
+   133→    };
+   134→    tick();
+   135→    const id = window.setInterval(tick, 1000);
+   136→    return () => window.clearInterval(id);
+   137→  }, [expiresAt]);
+   138→
+   139→  return label;
+   140→}
+   141→
+   142→export function SendPanel() {
+   143→  const {
+   144→    supported,
+   145→    files,
+   146→    totalBytes,
+   147→    options,
+   148→    phase,
+   149→    info,
+   150→    progress,
+   151→    error,
+   152→    shareLink,
+   153→    addFiles,
+   154→    removeFile,
+   155→    clearFiles,
+   156→    setOption,
+   157→    create,
+   158→    cancel,
+   159→    reset,
+   160→  } = useSendTransfer();
+   161→
+   162→  // Capability probes run after mount to keep SSR and hydration in sync.
+   163→  const [mounted, setMounted] = useState(false);
+   164→  const [folderPickerSupported, setFolderPickerSupported] = useState(false);
+   165→  useEffect(() => {
+   166→    setMounted(true);
+   167→    const probe = document.createElement("input");
+   168→    setFolderPickerSupported("webkitdirectory" in probe);
+   169→  }, []);
+   170→  const unsupported = mounted && !supported;
+   171→
+   172→  const [dragOver, setDragOver] = useState(false);
+   173→  const [qrOpen, setQrOpen] = useState(false);
+   174→  const [optionsOpen, setOptionsOpen] = useState(false);
+   175→
+   176→  const countdown = useCountdown(phase === "waiting" ? info?.expiresAt : null);
+   177→
+   178→  const attachFolderInput = useCallback((el: HTMLInputElement | null) => {
+   179→    if (el) {
+   180→      el.setAttribute("webkitdirectory", "");
+   181→      el.setAttribute("directory", "");
+   182→    }
+   183→  }, []);
+   184→
+   185→  const handleInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+   186→    const selected = e.target.files;
+   187→    if (selected && selected.length > 0) addFiles(selected);
+   188→    e.target.value = ""; // allow re-picking the same file
+   189→  };
+   190→
+   191→  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+   192→    e.preventDefault();
+   193→    setDragOver(false);
+   194→    const dropped = Array.from(e.dataTransfer?.files ?? []);
+   195→    if (dropped.length > 0) addFiles(dropped);
+   196→  };
+   197→
+   198→  const handleDropzoneKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+   199→    // Basic keyboard support for the drop target itself.
+   200→    if (e.key === "Enter" || e.key === " ") {
+   201→      e.preventDefault();
+   202→      document.getElementById("send-file-input")?.click();
+   203→    }
+   204→  };
+   205→
+   206→  // ------------------------------------------------------------- unsupported
+   207→
+   208→  if (unsupported) {
+   209→    return (
+   210→      <Card className="rounded-2xl border-destructive/40">
+   211→        <CardContent className="p-6">
+   212→          <Alert variant="destructive">
+   213→            <TriangleAlert />
+   214→            <AlertTitle>Browser not supported</AlertTitle>
+   215→            <AlertDescription>
+   216→              Your browser does not support direct browser-to-browser
+   217→              transfers. Try the latest Chrome, Edge, Firefox or Safari.
+   218→            </AlertDescription>
+   219→          </Alert>
+   220→        </CardContent>
+   221→      </Card>
+   222→    );
+   223→  }
+   224→
+   225→  // ------------------------------------------------------------- live phases
+   226→
+   227→  if (phase === "waiting") {
+   228→    return (
+   229→      <>
+   230→        {qrOpen && shareLink && (
+   231→          <QrDialog open={qrOpen} onOpenChange={setQrOpen} url={shareLink} />
+   232→        )}
+   233→        <Card className="rounded-2xl">
+   234→          <CardContent className="flex flex-col items-center p-6 text-center sm:p-8">
+   235→            <p className="inline-flex items-center gap-2.5 text-sm font-medium text-muted-foreground">
+   236→              <span aria-hidden="true" className="relative flex size-2.5">
+   237→                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-60" />
+   238→                <span className="relative inline-flex size-2.5 rounded-full bg-rose-600 dark:bg-rose-500" />
+   239→              </span>
+   240→              Waiting for recipient
+   241→            </p>
+   242→
+   243→            <p className="mt-7 text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
+   244→              Transfer code
+   245→            </p>
+   246→            <p
+   247→              className="mt-2 select-text text-5xl font-bold tracking-widest tabular-nums sm:text-6xl"
+   248→              aria-label={`Transfer code ${formatCode(info?.code ?? "")}`}
+   249→            >
+   250→              {formatCode(info?.code ?? "")}
+   251→            </p>
+   252→
+   253→            <div className="mt-8 w-full space-y-2 text-left">
+   254→              <Label
+   255→                htmlFor="share-link"
+   256→                className="text-xs font-medium text-muted-foreground"
+   257→              >
+   258→                Share link
+   259→              </Label>
+   260→              <div className="flex items-center gap-2">
+   261→                <Input
+   262→                  id="share-link"
+   263→                  readOnly
+   264→                  value={shareLink ?? ""}
+   265→                  onFocus={(e) => e.currentTarget.select()}
+   266→                  className="h-11 rounded-xl font-mono text-xs sm:text-sm"
+   267→                />
+   268→                <Button
+   269→                  type="button"
+   270→                  variant="outline"
+   271→                  size="icon"
+   272→                  className="size-11 shrink-0 rounded-xl"
+   273→                  aria-label="Copy share link"
+   274→                  onClick={() =>
+   275→                    shareLink && void copyText(shareLink, "Link copied")
+   276→                  }
+   277→                >
+   278→                  <Copy aria-hidden="true" />
+   279→                </Button>
+   280→              </div>
+   281→            </div>
+   282→
+   283→            <div className="mt-5 grid w-full grid-cols-2 gap-2.5 sm:grid-cols-3">
+   284→              <Button
+   285→                type="button"
+   286→                className="col-span-2 h-11 rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600 sm:col-span-1"
+   287→                onClick={() =>
+   288→                  shareLink && void copyText(shareLink, "Link copied")
+   289→                }
+   290→              >
+   291→                <Link2 aria-hidden="true" />
+   292→                Copy Link
+   293→              </Button>
+   294→              <Button
+   295→                type="button"
+   296→                variant="outline"
+   297→                className="h-11 rounded-xl"
+   298→                onClick={() =>
+   299→                  info && void copyText(info.code, "Code copied")
+   300→                }
+   301→              >
+   302→                Copy Code
+   303→              </Button>
+   304→              <Button
+   305→                type="button"
+   306→                variant="outline"
+   307→                className="h-11 rounded-xl"
+   308→                onClick={() => setQrOpen(true)}
+   309→              >
+   310→                <QrCode aria-hidden="true" />
+   311→                Show QR
+   312→              </Button>
+   313→            </div>
+   314→
+   315→            <Button
+   316→              type="button"
+   317→              variant="outline"
+   318→              className="mt-2.5 h-11 w-full rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+   319→              onClick={() => void cancel("Cancelled by sender")}
+   320→            >
+   321→              <CircleX aria-hidden="true" />
+   322→              Cancel Transfer
+   323→            </Button>
+   324→
+   325→            <p className="mt-6 inline-flex items-start gap-2 text-sm text-muted-foreground">
+   326→              <MonitorSmartphone
+   327→                aria-hidden="true"
+   328→                className="mt-0.5 size-4 shrink-0"
+   329→              />
+   330→              Keep this tab open — files transfer directly from your browser.
+   331→            </p>
+   332→            <p className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+   333→              <Clock aria-hidden="true" className="size-3.5" />
+   334→              {countdown ? `Expires in ${countdown}` : "Expires soon"}
+   335→            </p>
+   336→          </CardContent>
+   337→        </Card>
+   338→      </>
+   339→    );
+   340→  }
+   341→
+   342→  if (phase === "connecting") {
+   343→    return (
+   344→      <Card className="rounded-2xl">
+   345→        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+   346→          <LoaderCircle
+   347→            aria-hidden="true"
+   348→            className="size-10 animate-spin text-rose-600 dark:text-rose-500"
+   349→          />
+   350→          <h3 className="mt-5 text-lg font-semibold">Connecting to recipient…</h3>
+   351→          <p className="mt-1 text-sm text-muted-foreground">
+   352→            Setting up a secure channel between the two browsers. This usually
+   353→            takes a few seconds.
+   354→          </p>
+   355→          <ConnectionSteps
+   356→            steps={["Offer sent", "Answer received", "Secure channel"]}
+   357→            className="mt-7"
+   358→          />
+   359→        </CardContent>
+   360→      </Card>
+   361→    );
+   362→  }
+   363→
+   364→  if (phase === "transferring" || phase === "reconnecting") {
+   365→    return (
+   366→      <div className="space-y-4">
+   367→        {phase === "reconnecting" && (
+   368→          <Alert className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+   369→            <WifiOff aria-hidden="true" />
+   370→            <AlertDescription className="text-amber-900 dark:text-amber-200">
+   371→              Connection interrupted — reconnecting… Keep both browsers open.
+   372→            </AlertDescription>
+   373→          </Alert>
+   374→        )}
+   375→        {progress && <ProgressPanel progress={progress} variant="sending" />}
+   376→        <Button
+   377→          type="button"
+   378→          variant="outline"
+   379→          className="h-11 w-full rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+   380→          onClick={() => void cancel("Cancelled by sender")}
+   381→        >
+   382→          <CircleX aria-hidden="true" />
+   383→          Cancel Transfer
+   384→        </Button>
+   385→      </div>
+   386→    );
+   387→  }
+   388→
+   389→  if (phase === "completed") {
+   390→    return (
+   391→      <Card className="rounded-2xl">
+   392→        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+   393→          <CircleCheckBig
+   394→            aria-hidden="true"
+   395→            className="size-12 text-emerald-600 dark:text-emerald-500"
+   396→          />
+   397→          <h3 className="mt-4 text-xl font-semibold">Transfer complete</h3>
+   398→          <p className="mt-1.5 text-sm text-muted-foreground tabular-nums">
+   399→            {files.length} file{files.length === 1 ? "" : "s"} •{" "}
+   400→            {formatBytes(totalBytes)}
+   401→          </p>
+   402→          <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
+   403→            <ShieldCheck aria-hidden="true" className="size-3.5" />
+   404→            SHA-256 verified ✓
+   405→          </p>
+   406→          <Button
+   407→            type="button"
+   408→            className="mt-7 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600 sm:w-auto sm:px-8"
+   409→            onClick={reset}
+   410→          >
+   411→            <Upload aria-hidden="true" />
+   412→            Send More Files
+   413→          </Button>
+   414→        </CardContent>
+   415→      </Card>
+   416→    );
+   417→  }
+   418→
+   419→  if (phase === "cancelled") {
+   420→    return (
+   421→      <Card className="rounded-2xl">
+   422→        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+   423→          <CircleX
+   424→            aria-hidden="true"
+   425→            className="size-12 text-muted-foreground"
+   426→          />
+   427→          <h3 className="mt-4 text-xl font-semibold">Transfer cancelled</h3>
+   428→          <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+   429→            The transfer was cancelled before it finished. No files were
+   430→            shared.
+   431→          </p>
+   432→          <Button
+   433→            type="button"
+   434→            variant="outline"
+   435→            className="mt-7 h-11 w-full rounded-xl sm:w-auto sm:px-8"
+   436→            onClick={reset}
+   437→          >
+   438→            <Upload aria-hidden="true" />
+   439→            Send More Files
+   440→          </Button>
+   441→        </CardContent>
+   442→      </Card>
+   443→    );
+   444→  }
+   445→
+   446→  if (phase === "failed") {
+   447→    return (
+   448→      <Card className="rounded-2xl">
+   449→        <CardContent className="p-6 sm:p-8">
+   450→          <Alert variant="destructive">
+   451→            <TriangleAlert />
+   452→            <AlertTitle>Transfer failed</AlertTitle>
+   453→            <AlertDescription>
+   454→              {error ?? "Something went wrong while setting up the transfer."}
+   455→            </AlertDescription>
+   456→          </Alert>
+   457→          <Button
+   458→            type="button"
+   459→            className="mt-5 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+   460→            onClick={reset}
+   461→          >
+   462→            <RotateCcw aria-hidden="true" />
+   463→            Try Again
+   464→          </Button>
+   465→        </CardContent>
+   466→      </Card>
+   467→    );
+   468→  }
+   469→
+   470→  if (phase === "expired") {
+   471→    return (
+   472→      <Card className="rounded-2xl">
+   473→        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+   474→          <Hourglass
+   475→            aria-hidden="true"
+   476→            className="size-12 text-muted-foreground"
+   477→          />
+   478→          <h3 className="mt-4 text-xl font-semibold">This transfer has expired.</h3>
+   479→          <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+   480→            The share window ran out. Start a new transfer to send these files.
+   481→          </p>
+   482→          <Button
+   483→            type="button"
+   484→            className="mt-7 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600 sm:w-auto sm:px-8"
+   485→            onClick={reset}
+   486→          >
+   487→            <Upload aria-hidden="true" />
+   488→            Start New Transfer
+   489→          </Button>
+   490→        </CardContent>
+   491→      </Card>
+   492→    );
+   493→  }
+   494→
+   495→  // -------------------------------------------------- idle | ready | creating
+   496→
+   497→  const editing = phase === "idle" || phase === "ready";
+   498→  const creating = phase === "creating";
+   499→  const passwordTooShort =
+   500→    options.usePassword && options.password.length > 0 && options.password.length < 4;
+   501→
+   502→  return (
+   503→    <Card className="gap-0 rounded-2xl py-0">
+   504→      <CardContent className="p-6 sm:p-8">
+   505→        <h3 className="sr-only">Send files</h3>
+   506→
+   507→        {/* Drop zone */}
+   508→        <div
+   509→          role="button"
+   510→          tabIndex={0}
+   511→          aria-label="Drop files here, or choose files from your device"
+   512→          onDragOver={(e) => {
+   513→            e.preventDefault();
+   514→            setDragOver(true);
+   515→          }}
+   516→          onDragLeave={(e) => {
+   517→            if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
+   518→              setDragOver(false);
+   519→            }
+   520→          }}
+   521→          onDrop={handleDrop}
+   522→          onKeyDown={handleDropzoneKeyDown}
+   523→          className={cn(
+   524→            "rounded-2xl border-2 border-dashed text-center transition-all duration-200 focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] focus-visible:outline-none",
+   525→            files.length > 0 ? "p-5" : "p-8 sm:p-10",
+   526→            dragOver
+   527→              ? "border-rose-500 bg-rose-50 shadow-lg shadow-rose-600/10 dark:border-rose-400 dark:bg-rose-500/10"
+   528→              : "border-border bg-muted/20 hover:border-rose-300 dark:hover:border-rose-500/50",
+   529→          )}
+   530→        >
+   531→          <CloudUpload
+   532→            aria-hidden="true"
+   533→            className={cn(
+   534→              "mx-auto transition-transform duration-200",
+   535→              files.length > 0 ? "size-7" : "size-10 sm:size-12",
+   536→              dragOver
+   537→                ? "scale-110 text-rose-600 dark:text-rose-400"
+   538→                : "text-muted-foreground",
+   539→            )}
+   540→          />
+   541→          <p className={cn("font-medium", files.length > 0 ? "mt-2 text-sm" : "mt-4")}>
+   542→            {dragOver
+   543→              ? "Drop files here"
+   544→              : files.length > 0
+   545→                ? "Drop more files here"
+   546→                : "Drag & drop files here"}
+   547→          </p>
+   548→          {files.length === 0 && (
+   549→            <p className="mt-1 text-sm text-muted-foreground">
+   550→              or choose files from your device
+   551→            </p>
+   552→          )}
+   553→          <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+   554→            <Button
+   555→              asChild
+   556→              className="h-11 rounded-xl bg-rose-600 px-6 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+   557→            >
+   558→              <label htmlFor="send-file-input">
+   559→                <Upload aria-hidden="true" />
+   560→                Select Files
+   561→              </label>
+   562→            </Button>
+   563→            {folderPickerSupported && (
+   564→              <Button
+   565→                asChild
+   566→                variant="outline"
+   567→                className="h-11 rounded-xl px-6"
+   568→              >
+   569→                <label htmlFor="send-folder-input">
+   570→                  <FolderUp aria-hidden="true" />
+   571→                  Select Folder
+   572→                </label>
+   573→              </Button>
+   574→            )}
+   575→          </div>
+   576→          <input
+   577→            id="send-file-input"
+   578→            type="file"
+   579→            multiple
+   580→            className="sr-only"
+   581→            onChange={handleInputChange}
+   582→          />
+   583→          <input
+   584→            ref={attachFolderInput}
+   585→            id="send-folder-input"
+   586→            type="file"
+   587→            multiple
+   588→            className="sr-only"
+   589→            onChange={handleInputChange}
+   590→          />
+   591→        </div>
+   592→
+   593→        {/* Inline errors while composing */}
+   594→        {error && editing && (
+   595→          <Alert variant="destructive" className="mt-4">
+   596→            <TriangleAlert />
+   597→            <AlertDescription>{error}</AlertDescription>
+   598→          </Alert>
+   599→        )}
+   600→
+   601→        {/* Large transfer warning */}
+   602→        {files.length > 0 && totalBytes > LARGE_TRANSFER_BYTES && (
+   603→          <Alert className="mt-4 border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+   604→            <TriangleAlert aria-hidden="true" />
+   605→            <AlertDescription className="text-amber-900 dark:text-amber-200">
+   606→              Large transfer — keep both browsers open and awake.
+   607→            </AlertDescription>
+   608→          </Alert>
+   609→        )}
+   610→
+   611→        {/* File list */}
+   612→        {files.length > 0 && (
+   613→          <div className="mt-6">
+   614→            <ul
+   615→              aria-label="Files to send"
+   616→              className="max-h-72 divide-y overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:transparent"
+   617→            >
+   618→              {files.map(({ key, file }) => (
+   619→                <li
+   620→                  key={key}
+   621→                  className="flex items-center gap-3 py-2.5 first:pt-0"
+   622→                >
+   623→                  <FileIcon name={file.name} mimeType={file.type} />
+   624→                  <div className="min-w-0 flex-1">
+   625→                    <p className="truncate text-sm font-medium" title={file.name}>
+   626→                      {file.name}
+   627→                    </p>
+   628→                    <p className="text-xs text-muted-foreground tabular-nums">
+   629→                      {formatBytes(file.size)}
+   630→                    </p>
+   631→                  </div>
+   632→                  <Button
+   633→                    type="button"
+   634→                    variant="ghost"
+   635→                    size="icon"
+   636→                    className="size-9 shrink-0 text-muted-foreground hover:text-destructive"
+   637→                    aria-label={`Remove ${file.name}`}
+   638→                    disabled={!editing && !creating}
+   639→                    onClick={() => removeFile(key)}
+   640→                  >
+   641→                    <X aria-hidden="true" />
+   642→                  </Button>
+   643→                </li>
+   644→              ))}
+   645→            </ul>
+   646→            <div className="mt-1 flex items-center justify-between border-t pt-3">
+   647→              <p className="text-sm text-muted-foreground tabular-nums">
+   648→                {files.length} file{files.length === 1 ? "" : "s"} •{" "}
+   649→                {formatBytes(totalBytes)}
+   650→              </p>
+   651→              <Button
+   652→                type="button"
+   653→                variant="ghost"
+   654→                size="sm"
+   655→                className="h-9 text-muted-foreground hover:text-destructive"
+   656→                disabled={!editing && !creating}
+   657→                onClick={clearFiles}
+   658→              >
+   659→                <X aria-hidden="true" />
+   660→                Clear
+   661→              </Button>
+   662→            </div>
+   663→          </div>
+   664→        )}
+   665→
+   666→        <Separator className="my-5" />
+   667→
+   668→        {/* Transfer options */}
+   669→        <Collapsible open={optionsOpen} onOpenChange={setOptionsOpen}>
+   670→          <CollapsibleTrigger asChild>
+   671→            <Button
+   672→              type="button"
+   673→              variant="ghost"
+   674→              className="h-11 w-full justify-between px-2 text-muted-foreground hover:text-foreground"
+   675→            >
+   676→              <span className="inline-flex items-center gap-2">
+   677→                <Settings2 aria-hidden="true" className="size-4" />
+   678→                Transfer options
+   679→              </span>
+   680→              <svg
+   681→                aria-hidden="true"
+   682→                viewBox="0 0 24 24"
+   683→                fill="none"
+   684→                stroke="currentColor"
+   685→                strokeWidth="2"
+   686→                strokeLinecap="round"
+   687→                strokeLinejoin="round"
+   688→                className={cn(
+   689→                  "size-4 transition-transform duration-200",
+   690→                  optionsOpen && "rotate-180",
+   691→                )}
+   692→              >
+   693→                <path d="m6 9 6 6 6-6" />
+   694→              </svg>
+   695→            </Button>
+   696→          </CollapsibleTrigger>
+   697→          <CollapsibleContent className="space-y-4 pt-1">
+   698→            <div className="grid gap-4 sm:grid-cols-2">
+   699→              <div className="space-y-2.5 sm:col-span-2">
+   700→                <div className="flex items-center justify-between gap-3 rounded-xl border p-3.5">
+   701→                  <div className="flex items-start gap-2.5">
+   702→                    <Lock
+   703→                      aria-hidden="true"
+   704→                      className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+   705→                    />
+   706→                    <div>
+   707→                      <Label
+   708→                        htmlFor="use-password-switch"
+   709→                        className="text-sm font-medium"
+   710→                      >
+   711→                        Password protect
+   712→                      </Label>
+   713→                      <p className="mt-0.5 text-xs text-muted-foreground">
+   714→                        Recipients must enter the password to unlock the files.
+   715→                      </p>
+   716→                    </div>
+   717→                  </div>
+   718→                  <Switch
+   719→                    id="use-password-switch"
+   720→                    checked={options.usePassword}
+   721→                    onCheckedChange={(checked) =>
+   722→                      setOption("usePassword", checked)
+   723→                    }
+   724→                  />
+   725→                </div>
+   726→                {options.usePassword && (
+   727→                  <div className="space-y-1.5">
+   728→                    <Label htmlFor="transfer-password" className="text-sm font-medium">
+   729→                      Password
+   730→                    </Label>
+   731→                    <Input
+   732→                      id="transfer-password"
+   733→                      type="password"
+   734→                      value={options.password}
+   735→                      autoComplete="new-password"
+   736→                      placeholder="At least 4 characters"
+   737→                      className="h-11 rounded-xl"
+   738→                      aria-invalid={passwordTooShort || undefined}
+   739→                      onChange={(e) => setOption("password", e.target.value)}
+   740→                    />
+   741→                    <p
+   742→                      className={cn(
+   743→                        "text-xs",
+   744→                        passwordTooShort
+   745→                          ? "text-destructive"
+   746→                          : "text-muted-foreground",
+   747→                      )}
+   748→                    >
+   749→                      {passwordTooShort
+   750→                        ? "Password must be at least 4 characters."
+   751→                        : "Minimum 4 characters."}
+   752→                    </p>
+   753→                  </div>
+   754→                )}
+   755→              </div>
+   756→
+   757→              <div className="space-y-2">
+   758→                <Label htmlFor="expiry-select" className="text-sm font-medium">
+   759→                  Link expires after
+   760→                </Label>
+   761→                <Select
+   762→                  value={String(options.expiresInHours)}
+   763→                  onValueChange={(value) =>
+   764→                    setOption("expiresInHours", Number(value))
+   765→                  }
+   766→                >
+   767→                  <SelectTrigger
+   768→                    id="expiry-select"
+   769→                    className="h-11 w-full rounded-xl"
+   770→                  >
+   771→                    <SelectValue />
+   772→                  </SelectTrigger>
+   773→                  <SelectContent>
+   774→                    {EXPIRY_OPTIONS.map((option) => (
+   775→                      <SelectItem key={option.value} value={option.value}>
+   776→                        {option.label}
+   777→                      </SelectItem>
+   778→                    ))}
+   779→                  </SelectContent>
+   780→                </Select>
+   781→              </div>
+   782→
+   783→              <div className="space-y-2">
+   784→                <Label
+   785→                  htmlFor="max-downloads-select"
+   786→                  className="text-sm font-medium"
+   787→                >
+   788→                  Max downloads
+   789→                </Label>
+   790→                <Select
+   791→                  value={String(options.maxDownloads)}
+   792→                  onValueChange={(value) =>
+   793→                    setOption("maxDownloads", Number(value))
+   794→                  }
+   795→                >
+   796→                  <SelectTrigger
+   797→                    id="max-downloads-select"
+   798→                    className="h-11 w-full rounded-xl"
+   799→                  >
+   800→                    <SelectValue />
+   801→                  </SelectTrigger>
+   802→                  <SelectContent>
+   803→                    {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+   804→                      <SelectItem key={n} value={String(n)}>
+   805→                        {n}
+   806→                      </SelectItem>
+   807→                    ))}
+   808→                  </SelectContent>
+   809→                </Select>
+   810→              </div>
+   811→
+   812→              <div className="space-y-2 sm:col-span-2">
+   813→                <Label htmlFor="sender-name" className="text-sm font-medium">
+   814→                  Your name{" "}
+   815→                  <span className="font-normal text-muted-foreground">
+   816→                    (optional)
+   817→                  </span>
+   818→                </Label>
+   819→                <Input
+   820→                  id="sender-name"
+   821→                  value={options.senderName}
+   822→                  maxLength={40}
+   823→                  placeholder="Anonymous sender"
+   824→                  className="h-11 rounded-xl"
+   825→                  onChange={(e) => setOption("senderName", e.target.value)}
+   826→                />
+   827→              </div>
+   828→            </div>
+   829→          </CollapsibleContent>
+   830→        </Collapsible>
+   831→
+   832→        {/* Create */}
+   833→        <Button
+   834→          type="button"
+   835→          size="lg"
+   836→          disabled={files.length === 0 || creating}
+   837→          onClick={() => void create()}
+   838→          className="mt-4 h-12 w-full rounded-xl bg-rose-600 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+   839→        >
+   840→          {creating ? (
+   841→            <>
+   842→              <LoaderCircle aria-hidden="true" className="animate-spin" />
+   843→              Creating transfer…
+   844→            </>
+   845→          ) : (
+   846→            <>
+   847→              <Upload aria-hidden="true" />
+   848→              Create Transfer
+   849→            </>
+   850→          )}
+   851→        </Button>
+   852→
+   853→        <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
+   854→          Files transfer directly between connected browsers — nothing is
+   855→          uploaded until a recipient connects.
+   856→        </p>
+   857→      </CardContent>
+   858→    </Card>
+   859→  );
+   860→}
+   861→
