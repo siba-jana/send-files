@@ -9,6 +9,7 @@ import {
   randomBase62,
 } from '@/lib/server/crypto'
 import { checkRate, clientIp } from '@/lib/server/rate-limit'
+import { logServerError } from '@/lib/server/error-log'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -163,10 +164,15 @@ export async function POST(req: Request) {
         'create transfer failed:',
         err instanceof Error ? err.message : err
       )
+      logServerError(err, { route: 'POST /api/transfers', url: req.url })
       return NextResponse.json({ error: 'internal_error' }, { status: 500 })
     }
   }
 
   console.error('create transfer: exhausted unique-value generation attempts')
+  logServerError('exhausted unique-value generation attempts', {
+    route: 'POST /api/transfers',
+    url: req.url,
+  })
   return NextResponse.json({ error: 'internal_error' }, { status: 500 })
 }

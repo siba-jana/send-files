@@ -44,6 +44,7 @@ import {
 import {
   countMessage,
   ipOf,
+  limitsSnapshot,
   LIMITS,
   newMessageWindow,
   releaseConnection,
@@ -51,7 +52,7 @@ import {
   tryConnection,
 } from './src/limits'
 import { startCleanupJob, stopCleanupJob } from './src/cleanup'
-import { log, logError } from './src/log'
+import { log, logError, takeRecentErrors } from './src/log'
 
 const PORT = 3003
 const ROOM_PREFIX = 't:'
@@ -100,6 +101,101 @@ const io = new Server<ClientToServerEvents, ServerToClientEvents, DefaultEventsM
   maxHttpBufferSize: 200000,
   serveClient: false,
 })
+
+// ---------------------------------------------------------------- internal stats (Task 16)
+
+const STARTED_AT = Date.now()
+
+/** Lifetime counters for the admin console (survive bun --hot reloads). */
+interface SigCounters {
+  connections: number
+  refused: number
+  joins: number
+  signals: number
+  transfersDone: number
+  transfersCancelled: number
+}
+const globalForCounters = globalThis as unknown as {
+  __ilovedocSigCounters?: SigCounters
+  __ilovedocSigStartedAt?: number
+}
+const counters: SigCounters = (globalForCounters.__ilovedocSigCounters ??= {
+  connections: 0,
+  refused: 0,
+  joins: 0,
+  signals: 0,
+  transfersDone: 0,
+  transfersCancelled: 0,
+})
+if (globalForCounters.__ilovedocSigStartedAt === undefined) {
+  globalForCounters.__ilovedocSigStartedAt = STARTED_AT
+}
+const SERVICE_STARTED_AT = globalForCounters.__ilovedocSigStartedAt ?? STARTED_AT
+
+/**
+ * Loopback-only HTTP server exposing /internal/stats to the Next.js admin
+ * API (server-to-server). It CANNOT share port 3003: engine.io with path '/'
+ * intercepts every request there (verified — plain GET /internal/stats on
+ * 3003 answers 400 from engine.io). Bound to 127.0.0.1 and additionally
+ * guarded: requests arriving through the Caddy gateway always carry
+ * x-forwarded-for, direct loopback calls never do.
+ */
+const INTERNAL_PORT = 3004
+
+function isLoopback(remote: string | undefined): boolean {
+  return remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1'
+}
+
+function handleInternalRequest(req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse): void {
+  const url = new URL(req.url ?? '/', 'http://127.0.0.1')
+  if (url.pathname !== '/internal/stats') {
+    res.statusCode = 404
+    res.end('not found')
+    return
+  }
+  // Three guards: loopback socket, no gateway hop (XFF absent), marker header.
+  if (
+    !isLoopback(req.socket.remoteAddress) ||
+    req.headers['x-forwarded-for'] !== undefined ||
+    req.headers['x-ilovedoc-internal'] !== '1'
+  ) {
+    res.statusCode = 403
+    res.end('forbidden')
+    return
+  }
+
+  const mem = process.memoryUsage()
+  const roomsDetail = Array.from(rooms.entries())
+    .slice(0, 50)
+    .map(([token, room]) => ({
+      token,
+      sender: Boolean(room.sender),
+      receiver: Boolean(room.receiver),
+    }))
+
+  res.statusCode = 200
+  res.setHeader('content-type', 'application/json')
+  res.setHeader('cache-control', 'no-store')
+  res.end(
+    JSON.stringify({
+      ok: true,
+      service: 'signaling',
+      pid: process.pid,
+      startedAt: SERVICE_STARTED_AT,
+      uptimeSec: Math.floor((Date.now() - SERVICE_STARTED_AT) / 1000),
+      sockets: io.engine.clientsCount,
+      rooms: rooms.size,
+      roomsDetail,
+      counters,
+      perIp: limitsSnapshot(),
+      recentErrors: takeRecentErrors(),
+      limits: LIMITS,
+      memory: { rss: mem.rss, heapUsed: mem.heapUsed },
+    })
+  )
+}
+
+const internalServer = createServer(handleInternalRequest)
 
 // ---------------------------------------------------------------- rooms
 
@@ -264,6 +360,7 @@ function handleJoin(socket: ClientSocket, raw: unknown, ack: AckFn<JoinAckData> 
   } else {
     ackOk(ack, { peers: [] })
   }
+  counters.joins += 1
 
   if (role === 'receiver') {
     try {
@@ -313,6 +410,7 @@ function handleSignal(socket: ClientSocket, raw: unknown, ack: AckFn | undefined
   }
 
   io.to(peerId).emit('signal', { from: session.role, payload })
+  counters.signals += 1
   ackOk(ack)
 }
 
@@ -367,6 +465,7 @@ function handleDone(socket: ClientSocket, raw: unknown, ack: AckFn | undefined):
 
   const senderId = peerSocketId(token, 'receiver')
   if (senderId) io.to(senderId).emit('transfer:done', { from: 'receiver' })
+  counters.transfersDone += 1
   ackOk(ack)
   log('transfer', 'receiver confirmed download (transfer done)')
 }
@@ -403,6 +502,7 @@ function handleCancel(socket: ClientSocket, raw: unknown, ack: AckFn | undefined
     logError('db', 'cancelled event log failed', err)
   }
 
+  counters.transfersCancelled += 1
   ackOk(ack)
   log('transfer', `transfer cancelled by ${session.role}`)
 }
@@ -417,11 +517,13 @@ io.on('connection', (socket: ClientSocket) => {
   socket.data.iceCounts = new Map()
 
   if (!tryConnection(ip)) {
+    counters.refused += 1
     log('net', `connection refused (per-IP limit) ip=${ip}`)
     socket.disconnect(true)
     return
   }
   socket.data.counted = true
+  counters.connections += 1
   log('net', `connected ip=${ip} sockets=${io.engine.clientsCount}`)
 
   socket.on('transfer:join', (raw, ack) => handleJoin(socket, raw, ack))
@@ -450,6 +552,10 @@ httpServer.listen(PORT, () => {
   log('boot', `ilovedoc signaling listening on port ${PORT} (path=/)`)
 })
 
+internalServer.listen(INTERNAL_PORT, '127.0.0.1', () => {
+  log('boot', `internal stats listening on 127.0.0.1:${INTERNAL_PORT}`)
+})
+
 let shuttingDown = false
 function shutdown(signal: string): void {
   if (shuttingDown) return
@@ -457,6 +563,7 @@ function shutdown(signal: string): void {
   log('boot', `${signal} received — shutting down`)
   stopCleanupJob()
   io.close()
+  internalServer.close()
   httpServer.close(() => {
     try {
       closeDb()

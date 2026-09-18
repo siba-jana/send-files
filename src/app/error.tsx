@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { AlertTriangle, RotateCcw } from "lucide-react";
+import { errorToReport, reportClientError } from "@/lib/client-error";
 
 /**
  * Route-segment error boundary for `/` (Next.js convention file — not a
@@ -19,6 +20,7 @@ export default function Error({
   useEffect(() => {
     // Surface for observability (server logs / error reporting hookup point).
     console.error("Unhandled application error:", error);
+    reportClientError(errorToReport(error, { boundary: "route-segment" }), "error");
   }, [error]);
 
   return (

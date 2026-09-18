@@ -7,6 +7,7 @@ import { HowItWorks } from "@/components/site/how-it-works";
 import { SecuritySection } from "@/components/site/security-section";
 import { Faq, FAQS } from "@/components/site/faq";
 import { Footer } from "@/components/site/footer";
+import { AdminApp } from "@/components/admin/admin-app";
 
 const SITE_URL = "https://ilovedoc.org";
 const SITE_NAME = "I Love Doc";
@@ -83,8 +84,9 @@ function StructuredData() {
 }
 
 /**
- * Transfer links (`/?t=<token>`) and code entries (`/?code=<digits>`) are
- * private, ephemeral pages — keep them out of search engines entirely.
+ * Transfer links (`/?t=<token>`), code entries (`/?code=<digits>`) and the
+ * admin console (`/?admin=1`) are private, non-indexable views — keep them
+ * out of search engines entirely.
  */
 export async function generateMetadata({
   searchParams,
@@ -92,8 +94,8 @@ export async function generateMetadata({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }): Promise<Metadata> {
   const params = await searchParams;
-  const isPrivateTransfer = Boolean(params.t || params.code);
-  if (isPrivateTransfer) {
+  const isPrivateView = Boolean(params.t || params.code || params.admin);
+  if (isPrivateView) {
     return {
       robots: {
         index: false,
@@ -113,6 +115,11 @@ export default async function Home({
 }) {
   const params = await searchParams;
   const isPrivateTransfer = Boolean(params.t || params.code);
+  // Admin console (Task 16): a fully client-side app behind its own login —
+  // no site chrome, no structured data, noindex via generateMetadata above.
+  if (params.admin !== undefined) {
+    return <AdminApp />;
+  }
 
   return (
     <div className="min-h-screen flex flex-col bg-background">

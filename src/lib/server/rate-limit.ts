@@ -86,3 +86,29 @@ export function clientIp(req: Request): string {
   }
   return 'unknown'
 }
+
+/**
+ * Snapshot for the admin console: how many rate-limit windows are currently
+ * active, plus the busiest ones (bucket type only — IPs are never exposed).
+ */
+export function rateLimitSnapshot(): {
+  activeBuckets: number
+  top: Array<{ type: string; count: number; resetInSec: number }>
+} {
+  const now = Date.now()
+  let active = 0
+  const top: Array<{ type: string; count: number; resetInSec: number }> = []
+  for (const [key, state] of buckets) {
+    if (state.resetAt <= now) continue
+    active += 1
+    if (state.count >= 2) {
+      top.push({
+        type: key.split(':')[0] ?? key,
+        count: state.count,
+        resetInSec: Math.ceil((state.resetAt - now) / 1000),
+      })
+    }
+  }
+  top.sort((a, b) => b.count - a.count)
+  return { activeBuckets: active, top: top.slice(0, 10) }
+}

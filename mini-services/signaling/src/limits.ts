@@ -92,6 +92,21 @@ export function countMessage(window: MessageWindow): boolean {
 
 // ---------------------------------------------------------------- housekeeping
 
+/**
+ * Snapshot for the admin console (Task 16): how many IPs are tracked and
+ * the busiest ones by concurrent sockets.
+ */
+export function limitsSnapshot(): {
+  trackedIps: number
+  top: Array<{ ip: string; concurrent: number }>
+} {
+  const top = Array.from(ipStates.entries())
+    .map(([ip, state]) => ({ ip, concurrent: state.concurrent }))
+    .sort((a, b) => b.concurrent - a.concurrent)
+    .slice(0, 10)
+  return { trackedIps: ipStates.size, top }
+}
+
 /** Sweep stale per-IP state every minute; returns the sweep timer. */
 export function startLimitsSweep(): ReturnType<typeof setInterval> {
   const timer = setInterval(() => {

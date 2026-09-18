@@ -4,6 +4,7 @@ import { db } from '@/lib/db'
 import { verifyPassword } from '@/lib/server/crypto'
 import { checkRate, clientIp } from '@/lib/server/rate-limit'
 import { rotateReceiverToken } from '@/lib/server/receiver-tokens'
+import { insertErrorLog, logServerError } from '@/lib/server/error-log'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -47,6 +48,12 @@ async function markExpiredIfDue(
       'failed to mark transfer expired:',
       err instanceof Error ? err.message : err
     )
+    void insertErrorLog({
+      level: 'warn',
+      source: 'api',
+      message: 'Lazy expiry update failed',
+      context: { route: 'POST /api/transfers/[token]/unlock' },
+    })
   }
 }
 
@@ -144,6 +151,11 @@ export async function POST(
       'failed to rotate receiver token:',
       err instanceof Error ? err.message : err
     )
+    logServerError(err, {
+      route: 'POST /api/transfers/[token]/unlock',
+      url: req.url,
+      extra: { stage: 'rotate-receiver-token' },
+    })
     return NextResponse.json({ error: 'internal_error' }, { status: 500 })
   }
 

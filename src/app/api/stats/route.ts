@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { checkRate, clientIp } from '@/lib/server/rate-limit'
 import { readStatsCounters, sweepExpiredTransfers } from '@/lib/server/cleanup'
+import { logServerError } from '@/lib/server/error-log'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -95,7 +96,8 @@ export async function GET(req: Request) {
     return NextResponse.json(payload, {
       headers: { 'Cache-Control': 'public, max-age=30, stale-while-revalidate=30' },
     })
-  } catch {
+  } catch (err) {
+    logServerError(err, { route: 'GET /api/stats' })
     return NextResponse.json({ error: 'stats_unavailable' }, { status: 500 })
   }
 }

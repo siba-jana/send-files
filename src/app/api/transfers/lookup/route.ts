@@ -3,6 +3,7 @@ import { z } from 'zod'
 import { db } from '@/lib/db'
 import { hashCode } from '@/lib/server/crypto'
 import { checkRate, clientIp } from '@/lib/server/rate-limit'
+import { logServerError } from '@/lib/server/error-log'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
@@ -58,10 +59,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  const transfer = await db.transfer.findUnique({
-    where: { shareCodeHash: codeHash },
-    select: { publicToken: true, status: true, expiresAt: true },
-  })
+  let transfer: { publicToken: string; status: string; expiresAt: Date } | null
+  try {
+    transfer = await db.transfer.findUnique({
+      where: { shareCodeHash: codeHash },
+      select: { publicToken: true, status: true, expiresAt: true },
+    })
+  } catch (err) {
+    logServerError(err, {
+      route: 'POST /api/transfers/lookup',
+      url: req.url,
+      extra: { stage: 'db-lookup' },
+    })
+    return NextResponse.json({ error: 'internal' }, { status: 500 })
+  }
 
   if (
     transfer &&

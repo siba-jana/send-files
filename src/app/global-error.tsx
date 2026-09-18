@@ -16,6 +16,23 @@ export default function GlobalError({
 }) {
   useEffect(() => {
     console.error("Unhandled root error:", error);
+    // Inline best-effort report (keep this boundary dependency-light —
+    // assume nothing else loads). See src/lib/client-error.ts.
+    try {
+      void fetch("/api/log", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        keepalive: true,
+        body: JSON.stringify({
+          level: "error",
+          message: `RootError: ${error.message}`.slice(0, 2000),
+          stack: error.stack?.slice(0, 8000),
+          context: { boundary: "root", digest: error.digest },
+        }),
+      }).catch(() => {});
+    } catch {
+      /* swallow */
+    }
   }, [error]);
 
   return (

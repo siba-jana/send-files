@@ -74,3 +74,29 @@ model StatsCounter {
   key   String @id
   value BigInt @default(0)
 }
+
+// Centralized error/audit log for the admin console (Task 16). Rows are
+// written via raw SQL (lib/server/error-log.ts) for the same hot-reload
+// reasons as StatsCounter. No secrets, tokens or file contents are ever
+// stored here — messages are sanitized + length-capped at ingestion.
+model ErrorLog {
+  id        String   @id @default(cuid())
+  // error | warn | info
+  level     String
+  // client | api | page | signaling | admin | cleanup
+  source    String
+  message   String
+  stack     String?
+  url       String?
+  userAgent String?
+  ip        String?
+  // JSON string with extra context (route, transfer token prefix, digest…)
+  context   String?
+  resolved  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([level])
+  @@index([source])
+  @@index([resolved])
+}
