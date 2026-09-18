@@ -1,0 +1,788 @@
+     1→"use client";
+     2→
+     3→import {
+     4→  useEffect,
+     5→  useState,
+     6→  useSyncExternalStore,
+     7→  type ClipboardEvent,
+     8→  type FormEvent,
+     9→  type KeyboardEvent,
+    10→} from "react";
+    11→import { toast } from "sonner";
+    12→import {
+    13→  ArrowRight,
+    14→  CircleCheckBig,
+    15→  CircleX,
+    16→  Clock,
+    17→  Download,
+    18→  FileArchive,
+    19→  HardDrive,
+    20→  Link2,
+    21→  LoaderCircle,
+    22→  Lock,
+    23→  RotateCcw,
+    24→  ShieldCheck,
+    25→  TriangleAlert,
+    26→  User,
+    27→  WifiOff,
+    28→} from "lucide-react";
+    29→
+    30→import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+    31→import { Badge } from "@/components/ui/badge";
+    32→import { Button } from "@/components/ui/button";
+    33→import { Card, CardContent } from "@/components/ui/card";
+    34→import { Input } from "@/components/ui/input";
+    35→import { Label } from "@/components/ui/label";
+    36→import { Separator } from "@/components/ui/separator";
+    37→import { Switch } from "@/components/ui/switch";
+    38→import {
+    39→  Tooltip,
+    40→  TooltipContent,
+    41→  TooltipTrigger,
+    42→} from "@/components/ui/tooltip";
+    43→import { cn } from "@/lib/utils";
+    44→import {
+    45→  extractToken,
+    46→  normalizeCode,
+    47→  useReceiveTransfer,
+    48→} from "@/hooks/use-receive";
+    49→import { formatBytes } from "@/lib/transfer/stats";
+    50→import { buildZipBlob, canZip } from "@/lib/transfer/zip";
+    51→import { ConnectionSteps, ProgressPanel } from "./progress-panel";
+    52→import { FileIcon } from "./file-icon";
+    53→import { scrollToTransfer } from "./scroll-utils";
+    54→
+    55→/** Imperative API the TransferWidget uses for share-link / ?code= entry. */
+    56→export interface ReceiveControllerApi {
+    57→  startByToken: (token: string) => void;
+    58→  startByCode: (code: string) => void;
+    59→}
+    60→
+    61→export interface ReceivePanelProps {
+    62→  registerController?: (api: ReceiveControllerApi) => void;
+    63→}
+    64→
+    65→const emptySubscribe = () => () => {};
+    66→
+    67→/** false during SSR + hydration, true afterwards (no effect setState). */
+    68→function useIsHydrated(): boolean {
+    69→  return useSyncExternalStore(
+    70→    emptySubscribe,
+    71→    () => true,
+    72→    () => false,
+    73→  );
+    74→}
+    75→
+    76→function formatRemaining(ms: number): string {
+    77→  if (ms <= 0) return "Expired";
+    78→  const totalSeconds = Math.floor(ms / 1000);
+    79→  const hours = Math.floor(totalSeconds / 3600);
+    80→  const minutes = Math.floor((totalSeconds % 3600) / 60);
+    81→  const seconds = totalSeconds % 60;
+    82→  if (hours > 0) return `${hours} h ${minutes.toString().padStart(2, "0")} min`;
+    83→  if (minutes > 0) return `${minutes} min ${seconds.toString().padStart(2, "0")} s`;
+    84→  return `${seconds} s`;
+    85→}
+    86→
+    87→/** Live "Expires in 23 h 59 min" label. Starts null to avoid SSR mismatch. */
+    88→function useCountdown(expiresAt: string | null | undefined): string | null {
+    89→  const [snapshot, setSnapshot] = useState<{
+    90→    expiresAt: string;
+    91→    label: string;
+    92→  } | null>(null);
+    93→
+    94→  useEffect(() => {
+    95→    if (!expiresAt) return;
+    96→    const target = new Date(expiresAt).getTime();
+    97→    const tick = () => {
+    98→      setSnapshot({ expiresAt, label: formatRemaining(target - Date.now()) });
+    99→    };
+   100→    tick();
+   101→    const id = window.setInterval(tick, 1000);
+   102→    return () => window.clearInterval(id);
+   103→  }, [expiresAt]);
+   104→
+   105→  return snapshot && snapshot.expiresAt === expiresAt
+   106→    ? snapshot.label
+   107→    : null;
+   108→}
+   109→
+   110→export function ReceivePanel({ registerController }: ReceivePanelProps) {
+   111→  const {
+   112→    supported,
+   113→    fsSupported,
+   114→    phase,
+   115→    meta,
+   116→    progress,
+   117→    error,
+   118→    unlocked,
+   119→    startByToken,
+   120→    startByCode,
+   121→    submitPassword,
+   122→    accept,
+   123→    decline,
+   124→    cancel,
+   125→    reset,
+   126→    downloadFile,
+   127→    downloadAll,
+   128→  } = useReceiveTransfer();
+   129→
+   130→  // Capability probes are read post-hydration (useSyncExternalStore) so the
+   131→  // server-rendered HTML and the first client render stay identical.
+   132→  const hydrated = useIsHydrated();
+   133→  const unsupported = hydrated && !supported;
+   134→  const diskAvailable = hydrated && fsSupported;
+   135→
+   136→  const [code, setCode] = useState("");
+   137→  const [linkValue, setLinkValue] = useState("");
+   138→  const [password, setPassword] = useState("");
+   139→  const [saveToDisk, setSaveToDisk] = useState(true);
+   140→  const [zipping, setZipping] = useState(false);
+   141→
+   142→  const countdown = useCountdown(
+   143→    phase === "confirm" || phase === "unlocking" ? meta?.expiresAt : null,
+   144→  );
+   145→
+   146→  // Expose lookup entry points to the orchestrating widget (share links etc.).
+   147→  useEffect(() => {
+   148→    registerController?.({
+   149→      startByToken: (token: string) => void startByToken(token),
+   150→      startByCode: (value: string) => void startByCode(value),
+   151→    });
+   152→  }, [registerController, startByToken, startByCode]);
+   153→
+   154→  const submitCode = () => {
+   155→    if (normalizeCode(code).length === 6) void startByCode(code);
+   156→  };
+   157→
+   158→  const submitLink = (e: FormEvent) => {
+   159→    e.preventDefault();
+   160→    const token = extractToken(linkValue);
+   161→    if (token) {
+   162→      void startByToken(token);
+   163→    } else {
+   164→      toast.error("That doesn't look like a transfer link.");
+   165→    }
+   166→  };
+   167→
+   168→  const handleCodeKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+   169→    if (e.key === "Enter") {
+   170→      e.preventDefault();
+   171→      submitCode();
+   172→    }
+   173→  };
+   174→
+   175→  const handleCodePaste = (e: ClipboardEvent<HTMLInputElement>) => {
+   176→    const text = e.clipboardData.getData("text");
+   177→    if (!text) return;
+   178→    e.preventDefault();
+   179→    const digits = normalizeCode(text).slice(0, 6);
+   180→    if (digits) setCode(digits);
+   181→  };
+   182→
+   183→  // ------------------------------------------------------------- unsupported
+   184→
+   185→  if (unsupported) {
+   186→    return (
+   187→      <Card className="rounded-2xl border-destructive/40">
+   188→        <CardContent className="p-6">
+   189→          <Alert variant="destructive">
+   190→            <TriangleAlert />
+   191→            <AlertTitle>Browser not supported</AlertTitle>
+   192→            <AlertDescription>
+   193→              Your browser does not support direct browser-to-browser
+   194→              transfers. Try the latest Chrome, Edge, Firefox or Safari.
+   195→            </AlertDescription>
+   196→          </Alert>
+   197→        </CardContent>
+   198→      </Card>
+   199→    );
+   200→  }
+   201→
+   202→  // ------------------------------------------------------------- lookup states
+   203→
+   204→  if (phase === "resolving") {
+   205→    return (
+   206→      <Card className="rounded-2xl">
+   207→        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+   208→          <LoaderCircle
+   209→            aria-hidden="true"
+   210→            className="size-10 animate-spin text-rose-600 dark:text-rose-500"
+   211→          />
+   212→          <h3 className="mt-5 text-lg font-semibold">Looking up transfer…</h3>
+   213→          <p className="mt-1 text-sm text-muted-foreground">
+   214→            Checking the code with the transfer service.
+   215→          </p>
+   216→        </CardContent>
+   217→      </Card>
+   218→    );
+   219→  }
+   220→
+   221→  // ---------------------------------------------------- confirm | unlocking
+   222→
+   223→  if (phase === "confirm" || phase === "unlocking") {
+   224→    const unlocking = phase === "unlocking";
+   225→    const totalLabel = meta
+   226→      ? `${meta.fileCount} file${meta.fileCount === 1 ? "" : "s"} • ${formatBytes(meta.totalBytes)}`
+   227→      : "";
+   228→    return (
+   229→      <Card className="gap-0 rounded-2xl py-0">
+   230→        <CardContent className="p-6 sm:p-8">
+   231→          <div className="text-center">
+   232→            <h3 className="text-lg font-semibold">Files ready to receive</h3>
+   233→            <p className="mt-1.5 inline-flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
+   234→              <User aria-hidden="true" className="size-4" />
+   235→              From: {meta?.senderName?.trim() || "Anonymous sender"}
+   236→            </p>
+   237→          </div>
+   238→
+   239→          <div className="mt-6">
+   240→            {meta?.files ? (
+   241→              <>
+   242→                <ul
+   243→                  aria-label="Files in this transfer"
+   244→                  className="max-h-72 divide-y overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:transparent"
+   245→                >
+   246→                  {meta.files.map((file, i) => (
+   247→                    <li key={`${i}-${file.name}`} className="flex items-center gap-3 py-2.5 first:pt-0">
+   248→                      <FileIcon name={file.name} mimeType={file.mimeType} />
+   249→                      <div className="min-w-0 flex-1">
+   250→                        <p className="truncate text-sm font-medium" title={file.name}>
+   251→                          {file.name}
+   252→                        </p>
+   253→                        <p className="text-xs text-muted-foreground tabular-nums">
+   254→                          {formatBytes(file.size)}
+   255→                        </p>
+   256→                      </div>
+   257→                    </li>
+   258→                  ))}
+   259→                </ul>
+   260→                <div className="mt-1 flex items-center justify-between border-t pt-3">
+   261→                  <p className="text-sm text-muted-foreground tabular-nums">
+   262→                    Total: {totalLabel}
+   263→                  </p>
+   264→                  <p className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+   265→                    <Clock aria-hidden="true" className="size-3.5" />
+   266→                    {countdown ? `Expires in ${countdown}` : "Expires soon"}
+   267→                  </p>
+   268→                </div>
+   269→              </>
+   270→            ) : (
+   271→              <div className="rounded-2xl border border-dashed p-6 text-center">
+   272→                <Lock
+   273→                  aria-hidden="true"
+   274→                  className="mx-auto size-8 text-muted-foreground"
+   275→                />
+   276→                <p className="mt-3 font-medium tabular-nums">{totalLabel}</p>
+   277→                <p className="mt-1 text-sm text-muted-foreground">
+   278→                  File names are hidden until you unlock this transfer.
+   279→                </p>
+   280→                <p className="mt-3 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+   281→                  <Clock aria-hidden="true" className="size-3.5" />
+   282→                  {countdown ? `Expires in ${countdown}` : "Expires soon"}
+   283→                </p>
+   284→              </div>
+   285→            )}
+   286→          </div>
+   287→
+   288→          {!unlocked ? (
+   289→            <form
+   290→              className="mt-6 space-y-3"
+   291→              onSubmit={(e) => {
+   292→                e.preventDefault();
+   293→                void submitPassword(password);
+   294→              }}
+   295→            >
+   296→              <div className="space-y-2">
+   297→                <Label
+   298→                  htmlFor="transfer-password-input"
+   299→                  className="flex items-center gap-1.5 text-sm font-medium"
+   300→                >
+   301→                  <Lock aria-hidden="true" className="size-4 text-muted-foreground" />
+   302→                  Enter the transfer password
+   303→                </Label>
+   304→                <Input
+   305→                  id="transfer-password-input"
+   306→                  type="password"
+   307→                  value={password}
+   308→                  autoComplete="current-password"
+   309→                  placeholder="Password"
+   310→                  className="h-11 rounded-xl"
+   311→                  autoFocus
+   312→                  onChange={(e) => setPassword(e.target.value)}
+   313→                />
+   314→              </div>
+   315→              {error && (
+   316→                <p className="text-sm text-destructive" role="alert">
+   317→                  {error}
+   318→                </p>
+   319→              )}
+   320→              <div className="flex flex-col gap-2.5 sm:flex-row-reverse">
+   321→                <Button
+   322→                  type="submit"
+   323→                  disabled={unlocking || password.length === 0}
+   324→                  className="h-11 flex-1 rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+   325→                >
+   326→                  {unlocking ? (
+   327→                    <>
+   328→                      <LoaderCircle aria-hidden="true" className="animate-spin" />
+   329→                      Unlocking…
+   330→                    </>
+   331→                  ) : (
+   332→                    <>
+   333→                      <Lock aria-hidden="true" />
+   334→                      Unlock
+   335→                    </>
+   336→                  )}
+   337→                </Button>
+   338→                <Button
+   339→                  type="button"
+   340→                  variant="outline"
+   341→                  className="h-11 flex-1 rounded-xl"
+   342→                  onClick={decline}
+   343→                >
+   344→                  Back
+   345→                </Button>
+   346→              </div>
+   347→            </form>
+   348→          ) : (
+   349→            <div className="mt-6 space-y-4">
+   350→              {diskAvailable && (
+   351→                <div className="flex items-start justify-between gap-3 rounded-xl border p-3.5">
+   352→                  <div className="flex items-start gap-2.5">
+   353→                    <HardDrive
+   354→                      aria-hidden="true"
+   355→                      className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+   356→                    />
+   357→                    <div>
+   358→                      <Label
+   359→                        htmlFor="save-disk-switch"
+   360→                        className="text-sm font-medium"
+   361→                      >
+   362→                        Save directly to disk{" "}
+   363→                        <span className="font-normal text-muted-foreground">
+   364→                          (recommended)
+   365→                        </span>
+   366→                      </Label>
+   367→                      <p className="mt-0.5 text-xs text-muted-foreground">
+   368→                        Streams files straight to a folder you pick — no memory
+   369→                        limits, even for huge transfers.
+   370→                      </p>
+   371→                    </div>
+   372→                  </div>
+   373→                  <Switch
+   374→                    id="save-disk-switch"
+   375→                    checked={saveToDisk}
+   376→                    onCheckedChange={setSaveToDisk}
+   377→                  />
+   378→                </div>
+   379→              )}
+   380→
+   381→              <div className="flex flex-col gap-2.5 sm:flex-row-reverse">
+   382→                <Button
+   383→                  type="button"
+   384→                  size="lg"
+   385→                  className="h-12 flex-1 rounded-xl bg-rose-600 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+   386→                  onClick={() => void accept(diskAvailable ? saveToDisk : false)}
+   387→                >
+   388→                  <Download aria-hidden="true" />
+   389→                  Accept Files
+   390→                </Button>
+   391→                <Button
+   392→                  type="button"
+   393→                  variant="outline"
+   394→                  className="h-12 flex-1 rounded-xl sm:max-w-36"
+   395→                  onClick={decline}
+   396→                >
+   397→                  Back
+   398→                </Button>
+   399→              </div>
+   400→            </div>
+   401→          )}
+   402→
+   403→          <p className="mt-5 text-center text-xs leading-relaxed text-muted-foreground">
+   404→            Files stream directly from the sender&apos;s browser to yours — they
+   405→            are never stored on our servers. Every file is SHA-256 verified on
+   406→            arrival.
+   407→          </p>
+   408→        </CardContent>
+   409→      </Card>
+   410→    );
+   411→  }
+   412→
+   413→  // ------------------------------------------------------------- connecting
+   414→
+   415→  if (phase === "connecting") {
+   416→    return (
+   417→      <Card className="rounded-2xl">
+   418→        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+   419→          <LoaderCircle
+   420→            aria-hidden="true"
+   421→            className="size-10 animate-spin text-rose-600 dark:text-rose-500"
+   422→          />
+   423→          <h3 className="mt-5 text-lg font-semibold">Connecting to sender…</h3>
+   424→          <p className="mt-1 text-sm text-muted-foreground">
+   425→            Setting up a secure channel between the two browsers. This usually
+   426→            takes a few seconds.
+   427→          </p>
+   428→          <ConnectionSteps
+   429→            steps={["Offer received", "Answer sent", "Secure channel opening"]}
+   430→            className="mt-7"
+   431→          />
+   432→        </CardContent>
+   433→      </Card>
+   434→    );
+   435→  }
+   436→
+   437→  // ------------------------------------------------- transferring | reconnecting
+   438→
+   439→  if (phase === "transferring" || phase === "reconnecting") {
+   440→    return (
+   441→      <div className="space-y-4">
+   442→        {phase === "reconnecting" && (
+   443→          <Alert className="border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-200">
+   444→            <WifiOff aria-hidden="true" />
+   445→            <AlertDescription className="text-amber-900 dark:text-amber-200">
+   446→              Connection interrupted — reconnecting… Keep both browsers open.
+   447→            </AlertDescription>
+   448→          </Alert>
+   449→        )}
+   450→        {progress && <ProgressPanel progress={progress} variant="receiving" />}
+   451→        <Button
+   452→          type="button"
+   453→          variant="outline"
+   454→          className="h-11 w-full rounded-xl text-destructive hover:bg-destructive/10 hover:text-destructive"
+   455→          onClick={() => void cancel("Stopped by recipient")}
+   456→        >
+   457→          <CircleX aria-hidden="true" />
+   458→          Stop Receiving
+   459→        </Button>
+   460→      </div>
+   461→    );
+   462→  }
+   463→
+   464→  // ------------------------------------------------------------- completed
+   465→
+   466→  if (phase === "completed") {
+   467→    const results = progress?.results ?? [];
+   468→    const totalBytesReceived = results.reduce((acc, r) => acc + r.size, 0);
+   469→    const downloadable = results.filter((r) => r.blob);
+   470→    const zipSupported = downloadable.length > 1 && canZip(downloadable);
+   471→
+   472→    /** Build one ZIP from the in-memory results (stored, no compression). */
+   473→    const downloadAllAsZip = async () => {
+   474→      if (!zipSupported || zipping) return;
+   475→      setZipping(true);
+   476→      try {
+   477→        const blob = await buildZipBlob(
+   478→          downloadable.map((r) => ({
+   479→            name: r.name,
+   480→            blob: r.blob as Blob,
+   481→            expectedSize: r.size,
+   482→          })),
+   483→        );
+   484→        const url = URL.createObjectURL(blob);
+   485→        const a = document.createElement("a");
+   486→        a.href = url;
+   487→        a.download = `ilovedoc-files-${(meta?.token ?? "transfer").slice(0, 6)}.zip`;
+   488→        document.body.appendChild(a);
+   489→        a.click();
+   490→        a.remove();
+   491→        setTimeout(() => URL.revokeObjectURL(url), 30_000);
+   492→        toast.success("ZIP archive downloaded");
+   493→      } catch {
+   494→        toast.error("Couldn't build the ZIP — use the per-file downloads.");
+   495→      } finally {
+   496→        setZipping(false);
+   497→      }
+   498→    };
+   499→
+   500→    return (
+   501→      <Card className="gap-0 rounded-2xl py-0">
+   502→        <CardContent className="p-6 sm:p-8">
+   503→          <div className="flex flex-col items-center text-center">
+   504→            <CircleCheckBig
+   505→              aria-hidden="true"
+   506→              className="size-12 text-emerald-600 dark:text-emerald-500"
+   507→            />
+   508→            <h3 className="mt-4 text-xl font-semibold">
+   509→              Files received successfully
+   510→            </h3>
+   511→            <p className="mt-1.5 text-sm text-muted-foreground tabular-nums">
+   512→              {results.length > 0
+   513→                ? `${results.length} file${results.length === 1 ? "" : "s"} • ${formatBytes(totalBytesReceived)}`
+   514→                : meta
+   515→                  ? `${meta.fileCount} file${meta.fileCount === 1 ? "" : "s"}`
+   516→                  : ""}
+   517→            </p>
+   518→          </div>
+   519→
+   520→          {results.length > 0 ? (
+   521→            <ul
+   522→              aria-label="Received files"
+   523→              className="mt-6 max-h-72 divide-y overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:transparent"
+   524→            >
+   525→              {results.map((item, i) => (
+   526→                <li
+   527→                  key={`${i}-${item.name}`}
+   528→                  className="flex items-center gap-3 py-2.5 first:pt-0"
+   529→                >
+   530→                  <FileIcon name={item.name} />
+   531→                  <div className="min-w-0 flex-1">
+   532→                    <p className="truncate text-sm font-medium" title={item.name}>
+   533→                      {item.name}
+   534→                    </p>
+   535→                    <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-muted-foreground">
+   536→                      <span className="tabular-nums">{formatBytes(item.size)}</span>
+   537→                      {item.sha256 ? (
+   538→                        <Tooltip>
+   539→                          <TooltipTrigger asChild>
+   540→                            <span
+   541→                              className="inline-flex cursor-default items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400"
+   542→                              title={`SHA-256: ${item.sha256}`}
+   543→                            >
+   544→                              <ShieldCheck aria-hidden="true" className="size-3.5" />
+   545→                              SHA-256 verified ✓
+   546→                            </span>
+   547→                          </TooltipTrigger>
+   548→                          <TooltipContent
+   549→                            side="top"
+   550→                            className="max-w-64 break-all font-mono text-[10px]"
+   551→                          >
+   552→                            SHA-256 {item.sha256.slice(0, 16)}…
+   553→                          </TooltipContent>
+   554→                        </Tooltip>
+   555→                      ) : (
+   556→                        <span>Received</span>
+   557→                      )}
+   558→                    </p>
+   559→                  </div>
+   560→                  {item.savedToDisk ? (
+   561→                    <Badge className="shrink-0 gap-1 border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
+   562→                      <HardDrive aria-hidden="true" className="size-3" />
+   563→                      Saved to disk
+   564→                    </Badge>
+   565→                  ) : (
+   566→                    item.blob && (
+   567→                      <Button
+   568→                        type="button"
+   569→                        variant="outline"
+   570→                        size="sm"
+   571→                        className="h-9 shrink-0 rounded-lg"
+   572→                        onClick={() => downloadFile(item)}
+   573→                      >
+   574→                        <Download aria-hidden="true" />
+   575→                        Download
+   576→                      </Button>
+   577→                    )
+   578→                  )}
+   579→                </li>
+   580→              ))}
+   581→            </ul>
+   582→          ) : (
+   583→            <p className="mt-4 text-center text-sm text-muted-foreground">
+   584→              The sender cancelled before any files finished.
+   585→            </p>
+   586→          )}
+   587→
+   588→          <Separator className="my-5" />
+   589→
+   590→          <div className="flex flex-col gap-2.5">
+   591→            {zipSupported ? (
+   592→              <Tooltip>
+   593→                <TooltipTrigger asChild>
+   594→                  <Button
+   595→                    type="button"
+   596→                    className="h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+   597→                    disabled={zipping}
+   598→                    onClick={() => void downloadAllAsZip()}
+   599→                  >
+   600→                    {zipping ? (
+   601→                      <LoaderCircle aria-hidden="true" className="animate-spin" />
+   602→                    ) : (
+   603→                      <FileArchive aria-hidden="true" />
+   604→                    )}
+   605→                    {zipping ? "Building ZIP…" : `Download All as ZIP (${downloadable.length})`}
+   606→                  </Button>
+   607→                </TooltipTrigger>
+   608→                <TooltipContent>
+   609→                  One archive, built in your browser — names, sizes and SHA-256
+   610→                  hashes are exactly the ones shown above.
+   611→                </TooltipContent>
+   612→              </Tooltip>
+   613→            ) : null}
+   614→            {downloadable.length > 0 && (
+   615→              <Button
+   616→                type="button"
+   617→                variant={zipSupported ? "outline" : "default"}
+   618→                className={cn(
+   619→                  "h-11 w-full rounded-xl",
+   620→                  !zipSupported &&
+   621→                    "bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600",
+   622→                )}
+   623→                onClick={() => downloadAll(results)}
+   624→              >
+   625→                <Download aria-hidden="true" />
+   626→                Download files separately{downloadable.length > 1 ? ` (${downloadable.length})` : ""}
+   627→              </Button>
+   628→            )}
+   629→            <Button
+   630→              type="button"
+   631→              variant={zipSupported ? "outline" : "default"}
+   632→              className={cn(
+   633→                "h-11 w-full rounded-xl",
+   634→                !zipSupported &&
+   635→                  "bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600",
+   636→              )}
+   637→              onClick={() => {
+   638→                reset();
+   639→                scrollToTransfer();
+   640→              }}
+   641→            >
+   642→              <RotateCcw aria-hidden="true" />
+   643→              Receive More Files
+   644→            </Button>
+   645→          </div>
+   646→        </CardContent>
+   647→      </Card>
+   648→    );
+   649→  }
+   650→
+   651→  // ----------------------------------------------------- cancelled | failed
+   652→
+   653→  if (phase === "cancelled") {
+   654→    return (
+   655→      <Card className="rounded-2xl">
+   656→        <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
+   657→          <CircleX aria-hidden="true" className="size-12 text-muted-foreground" />
+   658→          <h3 className="mt-4 text-xl font-semibold">Transfer cancelled</h3>
+   659→          <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
+   660→            {error ?? "The transfer was stopped before it finished."}
+   661→          </p>
+   662→          <Button
+   663→            type="button"
+   664→            variant="outline"
+   665→            className="mt-7 h-11 w-full rounded-xl sm:w-auto sm:px-8"
+   666→            onClick={() => {
+   667→              reset();
+   668→              scrollToTransfer();
+   669→            }}
+   670→          >
+   671→            <RotateCcw aria-hidden="true" />
+   672→            Enter Another Code
+   673→          </Button>
+   674→        </CardContent>
+   675→      </Card>
+   676→    );
+   677→  }
+   678→
+   679→  if (phase === "failed") {
+   680→    return (
+   681→      <Card className="rounded-2xl">
+   682→        <CardContent className="p-6 sm:p-8">
+   683→          <Alert variant="destructive">
+   684→            <TriangleAlert />
+   685→            <AlertTitle>Couldn&apos;t receive this transfer</AlertTitle>
+   686→            <AlertDescription>
+   687→              {error ?? "Something went wrong while looking up the transfer."}
+   688→            </AlertDescription>
+   689→          </Alert>
+   690→          <Button
+   691→            type="button"
+   692→            className="mt-5 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+   693→            onClick={reset}
+   694→          >
+   695→            <RotateCcw aria-hidden="true" />
+   696→            Try Again
+   697→          </Button>
+   698→        </CardContent>
+   699→      </Card>
+   700→    );
+   701→  }
+   702→
+   703→  // ------------------------------------------------------------- idle
+   704→
+   705→  return (
+   706→    <Card className="gap-0 rounded-2xl py-0">
+   707→      <CardContent className="p-6 sm:p-8">
+   708→        <div className="text-center">
+   709→          <h3 className="text-lg font-semibold">Receive files</h3>
+   710→          <p className="mt-1.5 text-sm text-muted-foreground">
+   711→            Enter the 6-digit code the sender shared with you.
+   712→          </p>
+   713→        </div>
+   714→
+   715→        <div className="mt-6 space-y-3">
+   716→          <Label htmlFor="transfer-code-input" className="sr-only">
+   717→            Transfer code
+   718→          </Label>
+   719→          <input
+   720→            id="transfer-code-input"
+   721→            value={code}
+   722→            onChange={(e) => setCode(normalizeCode(e.target.value).slice(0, 6))}
+   723→            onKeyDown={handleCodeKeyDown}
+   724→            onPaste={handleCodePaste}
+   725→            type="text"
+   726→            inputMode="numeric"
+   727→            autoComplete="off"
+   728→            maxLength={6}
+   729→            placeholder="••••••"
+   730→            aria-label="Transfer code"
+   731→            className="h-16 w-full rounded-2xl border-2 bg-background text-center text-3xl font-semibold tracking-[0.5em] ps-[0.25em] tabular-nums transition-colors outline-none placeholder:text-muted-foreground/50 focus-visible:border-rose-500 focus-visible:ring-4 focus-visible:ring-rose-500/20 dark:focus-visible:border-rose-400"
+   732→          />
+   733→          <Button
+   734→            type="button"
+   735→            size="lg"
+   736→            disabled={normalizeCode(code).length !== 6}
+   737→            onClick={submitCode}
+   738→            className="h-12 w-full rounded-xl bg-rose-600 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+   739→          >
+   740→            <Download aria-hidden="true" />
+   741→            Receive Files
+   742→          </Button>
+   743→        </div>
+   744→
+   745→        <div className="my-6 flex items-center gap-3" aria-hidden="true">
+   746→          <Separator className="flex-1" />
+   747→          <span className="text-xs text-muted-foreground">or</span>
+   748→          <Separator className="flex-1" />
+   749→        </div>
+   750→
+   751→        <form onSubmit={submitLink} className="space-y-3">
+   752→          <Label
+   753→            htmlFor="transfer-link-input"
+   754→            className="flex items-center gap-1.5 text-sm font-medium"
+   755→          >
+   756→            <Link2 aria-hidden="true" className="size-4 text-muted-foreground" />
+   757→            Have a sharing link?
+   758→          </Label>
+   759→          <div className="flex flex-col gap-2.5 sm:flex-row">
+   760→            <Input
+   761→              id="transfer-link-input"
+   762→              type="text"
+   763→              value={linkValue}
+   764→              placeholder="Paste the link that starts with the site address"
+   765→              className="h-11 flex-1 rounded-xl"
+   766→              onChange={(e) => setLinkValue(e.target.value)}
+   767→            />
+   768→            <Button
+   769→              type="submit"
+   770→              variant="outline"
+   771→              disabled={!linkValue.trim()}
+   772→              className="h-11 shrink-0 rounded-xl"
+   773→            >
+   774→              Open Transfer Link
+   775→              <ArrowRight aria-hidden="true" />
+   776→            </Button>
+   777→          </div>
+   778→        </form>
+   779→
+   780→        <p className="mt-5 text-center text-xs leading-relaxed text-muted-foreground">
+   781→          Ask the sender for a 6-digit code or a link. Files arrive straight
+   782→          from their browser, SHA-256 verified.
+   783→        </p>
+   784→      </CardContent>
+   785→    </Card>
+   786→  );
+   787→}
+   788→

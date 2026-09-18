@@ -67,7 +67,7 @@ export function SiteHeader() {
         <a
           href="#top"
           aria-label="I Love Doc — back to top"
-          className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+          className="inline-flex items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >
           <Logo />
         </a>

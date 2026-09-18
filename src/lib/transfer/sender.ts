@@ -66,6 +66,11 @@ export interface SenderState {
   rttMs: number | null;
   /** Negotiated DataChannel chunk size in bytes (protocol v1). */
   chunkSize: number | null;
+  /** ICE candidate types of the selected pair ("host", "srflx", "prflx", "relay") — honest path detail. */
+  candidateLocalType: string | null;
+  candidateRemoteType: string | null;
+  /** Wall-clock duration of the successful transfer (first byte → completion), set on completion. */
+  durationMs: number | null;
 }
 
 interface FileEntry {
@@ -120,6 +125,10 @@ export class TransferSender {
   private speed = new SpeedTracker(6000);
   private connectionKind: ConnectionKind = 'unknown';
   private rttMs: number | null = null;
+  private candidateLocalType: string | null = null;
+  private candidateRemoteType: string | null = null;
+  private transferStartMs: number | null = null;
+  private durationMs: number | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private lastPong = Date.now();
   private lastEmit = 0;
@@ -248,6 +257,9 @@ export class TransferSender {
 
   private complete(): void {
     if (this.isFinished()) return;
+    if (this.transferStartMs !== null && this.durationMs === null) {
+      this.durationMs = Math.max(0, Date.now() - this.transferStartMs);
+    }
     this.cleanupPeer();
     this.signaling?.disconnect();
     for (const e of this.entries) {
@@ -382,6 +394,7 @@ export class TransferSender {
     this.chunkSize = negotiateChunkSize(pc.sctp?.maxMessageSize);
     for (const e of this.entries) e.totalChunks = Math.max(e.meta.size === 0 ? 0 : 1, Math.ceil(e.meta.size / this.chunkSize));
     dc.bufferedAmountLowThreshold = LOW_WATER;
+    if (this.transferStartMs === null) this.transferStartMs = Date.now();
     this.setPhase('transferring');
     this.transferStarted = true;
     this.startHeartbeat();
@@ -394,7 +407,13 @@ export class TransferSender {
       v: PROTOCOL_VERSION,
       transferId: this.opts.token,
       chunkSize: this.chunkSize,
-      files: this.entries.map((e) => ({ id: e.meta.id, name: e.meta.name, size: e.meta.size, mime: e.meta.mimeType })),
+      files: this.entries.map((e) => ({
+        id: e.meta.id,
+        name: e.meta.name,
+        size: e.meta.size,
+        mime: e.meta.mimeType,
+        mtime: Number.isFinite(e.file.lastModified) ? e.file.lastModified : undefined,
+      })),
     });
 
     const resumeGeneration = this.generation;
@@ -771,9 +790,9 @@ export class TransferSender {
       if (!pair) return;
       const local = pair.localCandidateId ? stats.get(pair.localCandidateId as string) : undefined;
       const remote = pair.remoteCandidateId ? stats.get(pair.remoteCandidateId as string) : undefined;
-      const relay =
-        (local as { candidateType?: string } | undefined)?.candidateType === 'relay' ||
-        (remote as { candidateType?: string } | undefined)?.candidateType === 'relay';
+      const localType = (local as { candidateType?: string } | undefined)?.candidateType ?? null;
+      const remoteType = (remote as { candidateType?: string } | undefined)?.candidateType ?? null;
+      const relay = localType === 'relay' || remoteType === 'relay';
       const kind: ConnectionKind = relay ? 'relay' : 'direct';
       // Candidate-pair reports expose currentRoundTripTime in seconds.
       const crtt = pair.currentRoundTripTime;
@@ -782,12 +801,15 @@ export class TransferSender {
         : null;
       const kindChanged = kind !== this.connectionKind;
       const rttChanged = rtt !== null && (this.rttMs === null || Math.abs(rtt - this.rttMs) >= 5);
+      const pathChanged = localType !== this.candidateLocalType || remoteType !== this.candidateRemoteType;
       this.connectionKind = kind;
       this.rttMs = rtt ?? this.rttMs;
+      this.candidateLocalType = localType ?? this.candidateLocalType;
+      this.candidateRemoteType = remoteType ?? this.candidateRemoteType;
       if (kindChanged) {
         this.signaling?.sendState(this.opts.token, kind === 'relay' ? 'connected-relay' : 'connected-direct');
       }
-      if (kindChanged || rttChanged) this.emit(true);
+      if (kindChanged || rttChanged || pathChanged) this.emit(true);
     } catch {
       /* stats unavailable — keep unknown */
     }
@@ -820,6 +842,9 @@ export class TransferSender {
       etaSeconds: this.phase === 'transferring' ? etaFromSpeed(speedBps, this.totalBytes - transferred) : null,
       rttMs: this.rttMs,
       chunkSize: this.dc ? this.chunkSize : null,
+      candidateLocalType: this.candidateLocalType,
+      candidateRemoteType: this.candidateRemoteType,
+      durationMs: this.phase === 'completed' ? this.durationMs : null,
     };
   }
 

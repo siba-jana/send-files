@@ -201,3 +201,29 @@
   );
   height: 1px;
 }
+
+/* ------------------------------------------------------------------ */
+/* Phase-card entrance: a gentle rise-and-fade applied to transfer     */
+/* phase cards (confirm / connecting / completed / cancelled). Each    */
+/* phase renders a fresh card, so the animation naturally replays on   */
+/* every phase change. Disabled under prefers-reduced-motion.          */
+@keyframes ilovedoc-fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.fade-slide-in {
+  animation: ilovedoc-fade-slide 0.35s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fade-slide-in {
+    animation: none;
+  }
+}

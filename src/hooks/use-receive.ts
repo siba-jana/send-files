@@ -48,6 +48,8 @@ export interface ReceiveResultItem {
   sha256: string | null;
   savedToDisk: boolean;
   blob?: Blob;
+  /** Sender-reported modification time — preserved on download when present. */
+  mtime?: number | null;
 }
 
 /** Normalize a code like "482-917" / "482917" / "482 917" → "482917" */
@@ -277,9 +279,15 @@ export function useReceiveTransfer() {
   // ------------------------------------------------------------ downloads
 
   const downloadFile = useCallback(
-    (item: ReceiveResultItem | SinkResult & { blob?: Blob }) => {
+    (item: ReceiveResultItem | (SinkResult & { blob?: Blob; mtime?: number | null })) => {
       if (!item.blob) return;
-      const url = URL.createObjectURL(item.blob);
+      // Wrap in a File when the sender reported a modification time so the
+      // browser preserves it on save (plain Blob saves get "now").
+      const payload =
+        typeof item.mtime === 'number' && Number.isFinite(item.mtime) && item.mtime > 0
+          ? new File([item.blob], item.name, { lastModified: item.mtime })
+          : item.blob;
+      const url = URL.createObjectURL(payload);
       revokedUrls.current.push(url);
       const a = document.createElement('a');
       a.href = url;
@@ -350,6 +358,7 @@ export function useReceiveTransfer() {
     error,
     unlocked,
     saveMode,
+    receiverToken,
     startByToken,
     startByCode,
     submitPassword,

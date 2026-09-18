@@ -7,22 +7,30 @@ import { checkRate, clientIp } from '@/lib/server/rate-limit'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const querySchema = z.object({
-  senderToken: z.string().min(1).max(256),
-})
+const querySchema = z
+  .object({
+    senderToken: z.string().min(1).max(256).optional(),
+    receiverToken: z.string().min(1).max(256).optional(),
+  })
+  .refine(
+    (v) =>
+      (v.senderToken !== undefined && v.receiverToken === undefined) ||
+      (v.senderToken === undefined && v.receiverToken !== undefined),
+    { message: 'exactly one of senderToken or receiverToken' },
+  )
 
 /**
- * Sender-only observability: the lifecycle event log for one transfer
- * (what happened and when — receiver joined, unlocked, connection kind,
- * delivery confirmations). Authenticated by the secret sender token; the
- * receiver can never read another party's log. Only safe metadata fields
- * are returned (kind / role booleans), never raw metadata blobs.
+ * Party observability: the lifecycle event log for one transfer (what
+ * happened and when — receiver joined, unlocked, connection kind, delivery
+ * confirmations). Authenticated by the secret sender OR receiver token; a
+ * party can only read the log of a transfer they took part in. Only safe
+ * metadata fields are returned (kind / role / state), never raw blobs.
  */
 export async function GET(
   req: Request,
   { params }: { params: Promise<{ token: string }> }
 ) {
-  // The sender UI polls this while waiting — allow a comfortable cadence.
+  // The waiting-card UI polls this while waiting — allow a comfortable cadence.
   const rl = checkRate(`events:${clientIp(req)}`, 60, 60_000)
   if (!rl.ok) {
     return NextResponse.json(
@@ -38,23 +46,34 @@ export async function GET(
 
   const url = new URL(req.url)
   const parsed = querySchema.safeParse({
-    senderToken: url.searchParams.get('senderToken') ?? '',
+    senderToken: url.searchParams.get('senderToken') ?? undefined,
+    receiverToken: url.searchParams.get('receiverToken') ?? undefined,
   })
   if (!parsed.success) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 
+  const isSender = parsed.data.senderToken !== undefined
   const transfer = await db.transfer.findUnique({
     where: { publicToken: token },
-    select: { id: true, senderTokenHash: true },
+    select: {
+      id: true,
+      senderTokenHash: true,
+      receiverTokenHash: true,
+    },
   })
   if (!transfer) {
     return NextResponse.json({ error: 'not_found' }, { status: 404 })
   }
 
-  // Timing-safe sender-token check (same answer shape for wrong token and
-  // unknown transfer — no existence oracle).
-  if (!timingSafeEqualHex(hashToken(parsed.data.senderToken), transfer.senderTokenHash)) {
+  // Timing-safe token check against the role-appropriate hash (same answer
+  // shape for wrong token and unknown transfer — no existence oracle).
+  const presented = isSender ? parsed.data.senderToken! : parsed.data.receiverToken!
+  const expectedHash = isSender ? transfer.senderTokenHash : transfer.receiverTokenHash
+  if (
+    !expectedHash ||
+    !timingSafeEqualHex(hashToken(presented), expectedHash)
+  ) {
     return NextResponse.json({ error: 'forbidden' }, { status: 403 })
   }
 

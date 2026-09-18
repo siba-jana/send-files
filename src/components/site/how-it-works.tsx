@@ -70,7 +70,7 @@ export function HowItWorks() {
             {STEPS.map(({ icon: Icon, title, description }, index) => (
               <motion.div
                 key={title}
-                className="h-full"
+                className="group/card h-full"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "-40px" }}
@@ -80,10 +80,10 @@ export function HowItWorks() {
                   ease: "easeOut",
                 }}
               >
-                <Card className="h-full gap-4 rounded-2xl">
+                <Card className="h-full gap-4 rounded-2xl transition-[transform,border-color,box-shadow] duration-300 hover:-translate-y-1 motion-reduce:transition-none motion-reduce:hover:translate-y-0 hover:border-rose-200 hover:shadow-lg hover:shadow-rose-600/5 dark:hover:border-rose-500/30">
                   <CardHeader>
                     <div className="flex items-center justify-between">
-                      <div className="flex size-11 items-center justify-center rounded-xl bg-rose-600/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400">
+                      <div className="flex size-11 items-center justify-center rounded-xl bg-rose-600/10 text-rose-600 transition-colors duration-300 group-hover/card:bg-rose-600/15 dark:bg-rose-500/15 dark:text-rose-400 dark:group-hover/card:bg-rose-500/20">
                         <Icon aria-hidden="true" className="size-5" />
                       </div>
                       <span

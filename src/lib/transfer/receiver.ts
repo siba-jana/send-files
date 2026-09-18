@@ -40,6 +40,8 @@ export type ReceiverPhase =
 export interface ReceivedFileResult extends SinkResult {
   size: number;
   sha256: string | null;
+  /** Sender-reported file modification time (epoch ms), when available. */
+  mtime: number | null;
 }
 
 export interface ReceiverState {
@@ -55,6 +57,11 @@ export interface ReceiverState {
   rttMs: number | null;
   /** Negotiated DataChannel chunk size in bytes (protocol v1). */
   chunkSize: number | null;
+  /** ICE candidate types of the selected pair — honest path detail. */
+  candidateLocalType: string | null;
+  candidateRemoteType: string | null;
+  /** Wall-clock duration of the successful transfer (first byte → completion), set on completion. */
+  durationMs: number | null;
   results: ReceivedFileResult[] | null;
 }
 
@@ -70,6 +77,7 @@ interface FileState {
   verified: boolean;
   failed: boolean;
   sha256: string | null;
+  mtime: number | null;
 }
 
 export interface ReceiverOptions {
@@ -96,6 +104,10 @@ export class TransferReceiver {
   private chunkSize = 65512;
   private connectionKind: ConnectionKind = 'unknown';
   private rttMs: number | null = null;
+  private candidateLocalType: string | null = null;
+  private candidateRemoteType: string | null = null;
+  private transferStartMs: number | null = null;
+  private durationMs: number | null = null;
   private speed = new SpeedTracker(6000);
   private results: ReceivedFileResult[] | null = null;
   private errorText: string | null = null;
@@ -406,14 +418,17 @@ export class TransferReceiver {
     }
   }
 
-  private handleInit(body: { v: number; transferId: string; chunkSize: number; files: { id: number; name: string; size: number; mime: string }[] }): void {
+  private handleInit(body: { v: number; transferId: string; chunkSize: number; files: { id: number; name: string; size: number; mime: string; mtime?: number }[] }): void {
     if (body.v !== 1) {
       this.sendError('protocol_version', 'Unsupported transfer protocol version.');
       this.fail('Unsupported transfer protocol version.');
       return;
     }
     this.gotAnyData = true;
-    if (this.phase !== 'transferring') this.setPhase('transferring');
+    if (this.phase !== 'transferring') {
+      if (this.transferStartMs === null) this.transferStartMs = Date.now();
+      this.setPhase('transferring');
+    }
     this.chunkSize = body.chunkSize || this.chunkSize;
 
     if (!this.initSeen) {
@@ -433,6 +448,7 @@ export class TransferReceiver {
             verified: false,
             failed: false,
             sha256: null,
+            mtime: typeof f.mtime === 'number' && Number.isFinite(f.mtime) ? f.mtime : null,
           });
         }
       }
@@ -468,6 +484,7 @@ export class TransferReceiver {
         verified: false,
         failed: false,
         sha256: null,
+        mtime: null,
       };
       this.files.set(body.id, f);
     }
@@ -543,10 +560,14 @@ export class TransferReceiver {
       ...(f.sink?.getResult() ?? { kind: 'memory' as const, name: f.name, savedToDisk: false, blob: new Blob() }),
       size: f.size,
       sha256: f.sha256 ?? shaById.get(f.id) ?? null,
+      mtime: f.mtime,
     }));
     this.signaling?.sendDone(this.opts.token);
     this.cleanupPeer();
     this.signaling?.disconnect();
+    if (this.transferStartMs !== null && this.durationMs === null) {
+      this.durationMs = Math.max(0, Date.now() - this.transferStartMs);
+    }
     this.setPhase('completed');
   }
 
@@ -589,9 +610,9 @@ export class TransferReceiver {
       if (!pair) return;
       const local = pair.localCandidateId ? stats.get(pair.localCandidateId as string) : undefined;
       const remote = pair.remoteCandidateId ? stats.get(pair.remoteCandidateId as string) : undefined;
-      const relay =
-        (local as { candidateType?: string } | undefined)?.candidateType === 'relay' ||
-        (remote as { candidateType?: string } | undefined)?.candidateType === 'relay';
+      const localType = (local as { candidateType?: string } | undefined)?.candidateType ?? null;
+      const remoteType = (remote as { candidateType?: string } | undefined)?.candidateType ?? null;
+      const relay = localType === 'relay' || remoteType === 'relay';
       const kind: ConnectionKind = relay ? 'relay' : 'direct';
       const crtt = pair.currentRoundTripTime;
       const rtt = typeof crtt === 'number' && Number.isFinite(crtt) && crtt >= 0
@@ -599,12 +620,15 @@ export class TransferReceiver {
         : null;
       const kindChanged = kind !== this.connectionKind;
       const rttChanged = rtt !== null && (this.rttMs === null || Math.abs(rtt - this.rttMs) >= 5);
+      const pathChanged = localType !== this.candidateLocalType || remoteType !== this.candidateRemoteType;
       this.connectionKind = kind;
       this.rttMs = rtt ?? this.rttMs;
+      this.candidateLocalType = localType ?? this.candidateLocalType;
+      this.candidateRemoteType = remoteType ?? this.candidateRemoteType;
       if (kindChanged) {
         this.signaling?.sendState(this.opts.token, kind === 'relay' ? 'connected-relay' : 'connected-direct');
       }
-      if (kindChanged || rttChanged) this.emit(true);
+      if (kindChanged || rttChanged || pathChanged) this.emit(true);
     } catch {
       /* stats unavailable */
     }
@@ -639,6 +663,9 @@ export class TransferReceiver {
       etaSeconds: this.phase === 'transferring' ? etaFromSpeed(speedBps, this.totalBytes - transferred) : null,
       rttMs: this.rttMs,
       chunkSize: this.dc ? this.chunkSize : null,
+      candidateLocalType: this.candidateLocalType,
+      candidateRemoteType: this.candidateRemoteType,
+      durationMs: this.phase === 'completed' ? this.durationMs : null,
       results: this.results,
     };
   }

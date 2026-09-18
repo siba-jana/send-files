@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Gauge, LoaderCircle, Radio, Timer } from "lucide-react";
+import { Check, Gauge, LoaderCircle, Radio, Route, Timer } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -37,13 +37,34 @@ const INDICATOR_DESTRUCTIVE =
 function ConnectionStatsRow({
   rttMs,
   chunkSize,
+  candidateLocalType,
+  candidateRemoteType,
 }: {
   rttMs: number | null;
   chunkSize: number | null;
+  candidateLocalType: string | null;
+  candidateRemoteType: string | null;
 }) {
-  if (rttMs === null && chunkSize === null) return null;
+  const path =
+    candidateLocalType && candidateRemoteType
+      ? `${candidateLocalType} ⇄ ${candidateRemoteType}`
+      : null;
+  if (rttMs === null && chunkSize === null && path === null) return null;
   return (
     <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {path !== null && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex cursor-default items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
+              <Route aria-hidden="true" className="size-3" />
+              {path}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            ICE candidates carrying this transfer: {candidateLocalType} on your side, {candidateRemoteType} on the peer side. "srflx" means a NAT-mapped address; "relay" means TURN.
+          </TooltipContent>
+        </Tooltip>
+      )}
       {rttMs !== null && (
         <Tooltip>
           <TooltipTrigger asChild>
@@ -159,6 +180,8 @@ export function ProgressPanel({ progress, variant, className }: ProgressPanelPro
           <ConnectionStatsRow
             rttMs={progress.rttMs}
             chunkSize={progress.chunkSize}
+            candidateLocalType={progress.candidateLocalType}
+            candidateRemoteType={progress.candidateRemoteType}
           />
         </div>
 

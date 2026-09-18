@@ -99,32 +99,36 @@ const TONE_DOT: Record<EventMeta["tone"], string> = {
 
 export interface SessionLogProps {
   token: string;
-  senderToken: string;
+  /** Secret auth token for the viewing party (senderToken or receiverToken). */
+  authToken: string;
+  /** Which party is viewing — picks the matching query parameter. */
+  role: "sender" | "receiver";
   /** Poll while true (e.g. the transfer is waiting); otherwise fetch once. */
   live: boolean;
   className?: string;
 }
 
 /**
- * Sender-side observability: a compact timeline of everything the server
- * recorded about this transfer. Polls every 10 s while `live`, otherwise
- * fetches once on mount. Degrades silently when the API is unreachable
- * (the log is a nicety, never critical UI).
+ * Party observability: a compact timeline of everything the server recorded
+ * about this transfer. Polls every 10 s while `live`, otherwise fetches once
+ * on mount. Degrades silently when the API is unreachable (the log is a
+ * nicety, never critical UI).
  */
-export function SessionLog({ token, senderToken, live, className }: SessionLogProps) {
+export function SessionLog({ token, authToken, role, live, className }: SessionLogProps) {
   const [events, setEvents] = useState<SessionLogEvent[] | null>(null);
   const [failed, setFailed] = useState(false);
   const inFlight = useRef(false);
 
   useEffect(() => {
-    if (!token || !senderToken) return;
+    if (!token || !authToken) return;
 
     const fetchEvents = async () => {
       if (inFlight.current) return;
       inFlight.current = true;
       try {
+        const param = role === "sender" ? "senderToken" : "receiverToken";
         const res = await fetch(
-          `/api/transfers/${encodeURIComponent(token)}/events?senderToken=${encodeURIComponent(senderToken)}`,
+          `/api/transfers/${encodeURIComponent(token)}/events?${param}=${encodeURIComponent(authToken)}`,
           { headers: { Accept: "application/json" } },
         );
         if (!res.ok) throw new Error(`status ${res.status}`);
@@ -141,7 +145,7 @@ export function SessionLog({ token, senderToken, live, className }: SessionLogPr
     if (!live) return;
     const id = window.setInterval(() => void fetchEvents(), 10_000);
     return () => window.clearInterval(id);
-  }, [token, senderToken, live]);
+  }, [token, authToken, role, live]);
 
   if (failed) return null;
 

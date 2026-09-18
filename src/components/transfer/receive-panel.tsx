@@ -14,6 +14,7 @@ import {
   CircleCheckBig,
   CircleX,
   Clock,
+  Copy,
   Download,
   FileArchive,
   HardDrive,
@@ -22,6 +23,7 @@ import {
   Lock,
   RotateCcw,
   ShieldCheck,
+  Timer,
   TriangleAlert,
   User,
   WifiOff,
@@ -46,11 +48,15 @@ import {
   normalizeCode,
   useReceiveTransfer,
 } from "@/hooks/use-receive";
-import { formatBytes } from "@/lib/transfer/stats";
+import { formatBytes, formatSpeed } from "@/lib/transfer/stats";
+import { formatDuration } from "./format-utils";
 import { buildZipBlob, canZip } from "@/lib/transfer/zip";
 import { ConnectionSteps, ProgressPanel } from "./progress-panel";
 import { FileIcon } from "./file-icon";
+import { FileThumb } from "./file-thumb";
+import { KbdHint } from "./kbd-hint";
 import { scrollToTransfer } from "./scroll-utils";
+import { SessionLog } from "./session-log";
 
 /** Imperative API the TransferWidget uses for share-link / ?code= entry. */
 export interface ReceiveControllerApi {
@@ -107,6 +113,27 @@ function useCountdown(expiresAt: string | null | undefined): string | null {
     : null;
 }
 
+/** Copy text with execCommand fallback; toast on success. */
+async function copyText(text: string, successMessage: string): Promise<void> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+    } else {
+      const ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      ta.remove();
+    }
+    toast.success(successMessage);
+  } catch {
+    toast.error("Couldn't copy — your browser blocked clipboard access.");
+  }
+}
+
 export function ReceivePanel({ registerController }: ReceivePanelProps) {
   const {
     supported,
@@ -116,6 +143,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
     progress,
     error,
     unlocked,
+    receiverToken,
     startByToken,
     startByCode,
     submitPassword,
@@ -155,6 +183,16 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
     if (normalizeCode(code).length === 6) void startByCode(code);
   };
 
+  /** Full reset: clears the panel inputs too, so a fresh code/link is typed
+   * from scratch (the previous code would otherwise linger in the field). */
+  const resetPanel = (scroll = true) => {
+    reset();
+    setCode("");
+    setLinkValue("");
+    setPassword("");
+    if (scroll) scrollToTransfer();
+  };
+
   const submitLink = (e: FormEvent) => {
     e.preventDefault();
     const token = extractToken(linkValue);
@@ -175,6 +213,16 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
   const handleCodePaste = (e: ClipboardEvent<HTMLInputElement>) => {
     const text = e.clipboardData.getData("text");
     if (!text) return;
+    // A share link pasted into the code field is routed to the link flow —
+    // a common slip that would otherwise produce nonsense digits.
+    if (/https?:\/\//i.test(text) || /[?&]t=/i.test(text)) {
+      const token = extractToken(text);
+      if (token) {
+        e.preventDefault();
+        void startByToken(token);
+        return;
+      }
+    }
     e.preventDefault();
     const digits = normalizeCode(text).slice(0, 6);
     if (digits) setCode(digits);
@@ -203,7 +251,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
 
   if (phase === "resolving") {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl fade-slide-in">
         <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
           <LoaderCircle
             aria-hidden="true"
@@ -226,7 +274,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
       ? `${meta.fileCount} file${meta.fileCount === 1 ? "" : "s"} • ${formatBytes(meta.totalBytes)}`
       : "";
     return (
-      <Card className="gap-0 rounded-2xl py-0">
+      <Card className="gap-0 rounded-2xl py-0 fade-slide-in">
         <CardContent className="p-6 sm:p-8">
           <div className="text-center">
             <h3 className="text-lg font-semibold">Files ready to receive</h3>
@@ -414,7 +462,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
 
   if (phase === "connecting") {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl fade-slide-in">
         <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
           <LoaderCircle
             aria-hidden="true"
@@ -468,17 +516,23 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
     const totalBytesReceived = results.reduce((acc, r) => acc + r.size, 0);
     const downloadable = results.filter((r) => r.blob);
     const zipSupported = downloadable.length > 1 && canZip(downloadable);
+    const duration = progress?.durationMs ?? null;
+    const avgSpeed =
+      duration !== null && duration > 0 && totalBytesReceived > 0
+        ? totalBytesReceived / (duration / 1000)
+        : null;
 
-    /** Build one ZIP from the in-memory results (stored, no compression). */
+    /** Build one ZIP from the in-memory results (deflated when it saves space). */
     const downloadAllAsZip = async () => {
       if (!zipSupported || zipping) return;
       setZipping(true);
       try {
-        const blob = await buildZipBlob(
+        const { blob, bytesSaved, deflatedEntries } = await buildZipBlob(
           downloadable.map((r) => ({
             name: r.name,
             blob: r.blob as Blob,
             expectedSize: r.size,
+            lastModified: r.mtime ?? undefined,
           })),
         );
         const url = URL.createObjectURL(blob);
@@ -489,7 +543,13 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
         a.click();
         a.remove();
         setTimeout(() => URL.revokeObjectURL(url), 30_000);
-        toast.success("ZIP archive downloaded");
+        if (deflatedEntries > 0 && bytesSaved > 0) {
+          toast.success(
+            `ZIP downloaded — ${deflatedEntries} of ${downloadable.length} files compressed, saving ${formatBytes(bytesSaved)}`,
+          );
+        } else {
+          toast.success("ZIP archive downloaded");
+        }
       } catch {
         toast.error("Couldn't build the ZIP — use the per-file downloads.");
       } finally {
@@ -498,7 +558,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
     };
 
     return (
-      <Card className="gap-0 rounded-2xl py-0">
+      <Card className="gap-0 rounded-2xl py-0 fade-slide-in">
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col items-center text-center">
             <CircleCheckBig
@@ -515,19 +575,36 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                   ? `${meta.fileCount} file${meta.fileCount === 1 ? "" : "s"}`
                   : ""}
             </p>
+            {duration !== null && (
+              <p className="mt-2.5 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border bg-muted/40 px-3.5 py-1 text-xs text-muted-foreground tabular-nums">
+                <span className="inline-flex items-center gap-1.5">
+                  <Timer aria-hidden="true" className="size-3.5" />
+                  Completed in {formatDuration(duration)}
+                </span>
+                {avgSpeed !== null && (
+                  <span
+                    className="inline-flex items-center gap-1.5"
+                    title="Total bytes received divided by the wall-clock duration"
+                  >
+                    <ShieldCheck aria-hidden="true" className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                    Average {formatSpeed(avgSpeed)}
+                  </span>
+                )}
+              </p>
+            )}
           </div>
 
           {results.length > 0 ? (
             <ul
               aria-label="Received files"
-              className="mt-6 max-h-72 divide-y overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:transparent"
+              className="mt-6 max-h-72 space-y-1 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:transparent"
             >
               {results.map((item, i) => (
                 <li
                   key={`${i}-${item.name}`}
-                  className="flex items-center gap-3 py-2.5 first:pt-0"
+                  className="flex items-center gap-3 rounded-xl px-2 py-2.5 first:pt-2.5 transition-colors hover:bg-muted/50"
                 >
-                  <FileIcon name={item.name} />
+                  <FileThumb blob={item.blob ?? new Blob()} name={item.name} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium" title={item.name}>
                       {item.name}
@@ -537,19 +614,27 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                       {item.sha256 ? (
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <span
-                              className="inline-flex cursor-default items-center gap-1 font-medium text-emerald-700 dark:text-emerald-400"
-                              title={`SHA-256: ${item.sha256}`}
+                            <button
+                              type="button"
+                              className="inline-flex cursor-pointer items-center gap-1 rounded font-medium text-emerald-700 outline-none transition-opacity hover:opacity-80 focus-visible:ring-2 focus-visible:ring-emerald-500/50 dark:text-emerald-400"
+                              title={`SHA-256: ${item.sha256} — click to copy`}
+                              onClick={() =>
+                                void copyText(
+                                  item.sha256 as string,
+                                  "SHA-256 hash copied",
+                                )
+                              }
                             >
                               <ShieldCheck aria-hidden="true" className="size-3.5" />
                               SHA-256 verified ✓
-                            </span>
+                              <Copy aria-hidden="true" className="size-3 opacity-60" />
+                            </button>
                           </TooltipTrigger>
                           <TooltipContent
                             side="top"
                             className="max-w-64 break-all font-mono text-[10px]"
                           >
-                            SHA-256 {item.sha256.slice(0, 16)}…
+                            SHA-256 {item.sha256.slice(0, 16)}… — click to copy
                           </TooltipContent>
                         </Tooltip>
                       ) : (
@@ -587,6 +672,18 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
 
           <Separator className="my-5" />
 
+          {/* Post-mortem: what the server recorded for this transfer (receiver view). */}
+          {meta && receiverToken && (
+            <div className="mb-5">
+              <SessionLog
+                token={meta.token}
+                authToken={receiverToken}
+                role="receiver"
+                live={false}
+              />
+            </div>
+          )}
+
           <div className="flex flex-col gap-2.5">
             {zipSupported ? (
               <Tooltip>
@@ -607,7 +704,8 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                 </TooltipTrigger>
                 <TooltipContent>
                   One archive, built in your browser — names, sizes and SHA-256
-                  hashes are exactly the ones shown above.
+                  hashes are exactly the ones shown above. Files are
+                  deflate-compressed when that saves space.
                 </TooltipContent>
               </Tooltip>
             ) : null}
@@ -635,8 +733,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                   "bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600",
               )}
               onClick={() => {
-                reset();
-                scrollToTransfer();
+                resetPanel();
               }}
             >
               <RotateCcw aria-hidden="true" />
@@ -652,7 +749,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
 
   if (phase === "cancelled") {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl fade-slide-in">
         <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
           <CircleX aria-hidden="true" className="size-12 text-muted-foreground" />
           <h3 className="mt-4 text-xl font-semibold">Transfer cancelled</h3>
@@ -664,8 +761,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             variant="outline"
             className="mt-7 h-11 w-full rounded-xl sm:w-auto sm:px-8"
             onClick={() => {
-              reset();
-              scrollToTransfer();
+              resetPanel();
             }}
           >
             <RotateCcw aria-hidden="true" />
@@ -678,7 +774,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
 
   if (phase === "failed") {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl fade-slide-in">
         <CardContent className="p-6 sm:p-8">
           <Alert variant="destructive">
             <TriangleAlert />
@@ -690,7 +786,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
           <Button
             type="button"
             className="mt-5 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
-            onClick={reset}
+            onClick={() => resetPanel(false)}
           >
             <RotateCcw aria-hidden="true" />
             Try Again
@@ -735,10 +831,12 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             size="lg"
             disabled={normalizeCode(code).length !== 6}
             onClick={submitCode}
+            title="Press Enter in the code field to start receiving"
             className="h-12 w-full rounded-xl bg-rose-600 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
           >
             <Download aria-hidden="true" />
             Receive Files
+            <KbdHint onPrimary>Enter</KbdHint>
           </Button>
         </div>
 

@@ -44,6 +44,8 @@ export interface InitFile {
   name: string;
   size: number;
   mime: string;
+  /** Optional file modification time (epoch ms) — preserved in ZIP entries. */
+  mtime?: number;
 }
 
 export interface TransferInitBody {

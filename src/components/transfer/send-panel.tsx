@@ -18,6 +18,7 @@ import {
   CloudUpload,
   Copy,
   FolderUp,
+  Gauge,
   History,
   Hourglass,
   Link2,
@@ -32,6 +33,7 @@ import {
   Settings2,
   Share2,
   ShieldCheck,
+  Timer,
   TriangleAlert,
   Upload,
   WifiOff,
@@ -62,7 +64,7 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useSendTransfer } from "@/hooks/use-send";
-import { formatBytes } from "@/lib/transfer/stats";
+import { formatBytes, formatSpeed } from "@/lib/transfer/stats";
 import {
   addRecentTransfer,
   clearRecentTransfers,
@@ -71,9 +73,11 @@ import {
   type RecentTransferStatus,
 } from "@/lib/transfer/recent";
 import { ConnectionSteps, ProgressPanel } from "./progress-panel";
-import { FileIcon } from "./file-icon";
+import { FileThumb } from "./file-thumb";
+import { KbdHint } from "./kbd-hint";
 import { scrollToTransfer } from "./scroll-utils";
 import { SessionLog } from "./session-log";
+import { formatDuration } from "./format-utils";
 
 const QrDialog = dynamic(() => import("./qr-dialog"), { ssr: false });
 
@@ -195,49 +199,8 @@ function useCountdown(expiresAt: string | null | undefined): string | null {
 }
 
 /** Image files (≤ 32 MB) get a real thumbnail; everything else the type icon. */
-function FileThumb({ file }: { file: File }) {
-  const imgRef = useRef<HTMLImageElement | null>(null);
-  const isImage =
-    file.type.startsWith("image/") && file.size <= 32 * 1024 * 1024;
-
-  useEffect(() => {
-    if (!isImage) return;
-    const url = URL.createObjectURL(file);
-    if (imgRef.current) imgRef.current.src = url;
-    return () => URL.revokeObjectURL(url);
-  }, [isImage, file]);
-
-  if (!isImage) return <FileIcon name={file.name} mimeType={file.type} />;
-  return (
-    <span
-      aria-hidden="true"
-      className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/40"
-    >
-      <img
-        ref={imgRef}
-        alt=""
-        loading="lazy"
-        className="size-full object-cover"
-      />
-    </span>
-  );
-}
-
-/** Tiny keyboard-hint chip shown inside buttons (decorative, title carries the info). */
-function KbdHint({ children, onPrimary = false }: { children: React.ReactNode; onPrimary?: boolean }) {
-  return (
-    <kbd
-      aria-hidden="true"
-      className={cn(
-        "ml-1 hidden rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold leading-none sm:inline-block",
-        onPrimary
-          ? "border-white/25 bg-white/15"
-          : "border-border bg-muted text-muted-foreground",
-      )}
-    >
-      {children}
-    </kbd>
-  );
+function SendFileThumb({ file }: { file: File }) {
+  return <FileThumb blob={file} name={file.name} mimeType={file.type} />;
 }
 
 interface ShareTarget {
@@ -419,7 +382,7 @@ export function SendPanel() {
         {qrOpen && shareLink && (
           <QrDialog open={qrOpen} onOpenChange={setQrOpen} url={shareLink} />
         )}
-        <Card className="rounded-2xl">
+        <Card className="rounded-2xl fade-slide-in">
           <CardContent className="flex flex-col items-center p-6 text-center sm:p-8">
             <p className="inline-flex items-center gap-2.5 text-sm font-medium text-muted-foreground">
               <span aria-hidden="true" className="relative flex size-2.5">
@@ -576,12 +539,13 @@ export function SendPanel() {
               {countdown ? `Expires in ${countdown}` : "Expires soon"}
             </p>
 
-            {/* Sender-only observability: live event timeline for this session. */}
+            {/* Live event timeline for this session (sender view). */}
             {info && (
               <div className="mt-5 w-full text-left">
                 <SessionLog
                   token={info.token}
-                  senderToken={info.senderToken}
+                  authToken={info.senderToken}
+                  role="sender"
                   live
                 />
               </div>
@@ -594,7 +558,7 @@ export function SendPanel() {
 
   if (phase === "connecting") {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl fade-slide-in">
         <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
           <LoaderCircle
             aria-hidden="true"
@@ -640,8 +604,13 @@ export function SendPanel() {
   }
 
   if (phase === "completed") {
+    const duration = progress?.durationMs ?? null;
+    const avgSpeed =
+      duration !== null && duration > 0 && totalBytes > 0
+        ? totalBytes / (duration / 1000)
+        : null;
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl fade-slide-in">
         <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
           <CircleCheckBig
             aria-hidden="true"
@@ -656,13 +625,31 @@ export function SendPanel() {
             <ShieldCheck aria-hidden="true" className="size-3.5" />
             SHA-256 verified ✓
           </p>
+          {duration !== null && (
+            <p className="mt-2.5 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border bg-muted/40 px-3.5 py-1 text-xs text-muted-foreground tabular-nums">
+              <span className="inline-flex items-center gap-1.5">
+                <Timer aria-hidden="true" className="size-3.5" />
+                Completed in {formatDuration(duration)}
+              </span>
+              {avgSpeed !== null && (
+                <span
+                  className="inline-flex items-center gap-1.5"
+                  title="Total bytes divided by the wall-clock duration"
+                >
+                  <Gauge aria-hidden="true" className="size-3.5" />
+                  Average {formatSpeed(avgSpeed)}
+                </span>
+              )}
+            </p>
+          )}
 
           {/* Post-mortem: what the server recorded for this transfer. */}
           {info && (
             <div className="mt-6 w-full text-left">
               <SessionLog
                 token={info.token}
-                senderToken={info.senderToken}
+                authToken={info.senderToken}
+                role="sender"
                 live={false}
               />
             </div>
@@ -685,7 +672,7 @@ export function SendPanel() {
 
   if (phase === "cancelled") {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl fade-slide-in">
         <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
           <CircleX
             aria-hidden="true"
@@ -715,7 +702,7 @@ export function SendPanel() {
 
   if (phase === "failed") {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl fade-slide-in">
         <CardContent className="p-6 sm:p-8">
           <Alert variant="destructive">
             <TriangleAlert />
@@ -742,7 +729,7 @@ export function SendPanel() {
 
   if (phase === "expired") {
     return (
-      <Card className="rounded-2xl">
+      <Card className="rounded-2xl fade-slide-in">
         <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
           <Hourglass
             aria-hidden="true"
@@ -894,7 +881,7 @@ export function SendPanel() {
                   key={key}
                   className="flex items-center gap-3 py-2.5 first:pt-0"
                 >
-                  <FileThumb file={file} />
+                  <SendFileThumb file={file} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium" title={file.name}>
                       {file.name}
