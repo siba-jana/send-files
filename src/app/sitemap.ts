@@ -9,40 +9,44 @@ import type { MetadataRoute } from "next";
  * (b) ephemeral — neither belongs in a sitemap. API routes are omitted
  * (non-HTML).
  */
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.DOMAIN ? `https://${process.env.DOMAIN}` : "https://www.ilovedoc.org");
+
 export default function sitemap(): MetadataRoute.Sitemap {
   return [
     {
-      url: "https://ilovedoc.org/",
+      url: `${SITE_URL}/`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 1,
     },
     {
-      url: "https://ilovedoc.org/send-large-files",
+      url: `${SITE_URL}/send-large-files`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.9,
     },
     {
-      url: "https://ilovedoc.org/how-it-works",
+      url: `${SITE_URL}/how-it-works`,
       lastModified: new Date(),
       changeFrequency: "monthly",
       priority: 0.7,
     },
     {
-      url: "https://ilovedoc.org/legal/terms",
+      url: `${SITE_URL}/legal/terms`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: "https://ilovedoc.org/legal/privacy",
+      url: `${SITE_URL}/legal/privacy`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: "https://ilovedoc.org/legal/dmca",
+      url: `${SITE_URL}/legal/dmca`,
       lastModified: new Date(),
       changeFrequency: "yearly",
       priority: 0.3,

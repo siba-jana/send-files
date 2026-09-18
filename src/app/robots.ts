@@ -6,6 +6,10 @@ import type { MetadataRoute } from "next";
  * pages themselves emit per-request `noindex` meta when `?t=`/`?code=` is
  * present, which is the correct mechanism for private, ephemeral URLs.
  */
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.DOMAIN ? `https://${process.env.DOMAIN}` : "https://www.ilovedoc.org");
+
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
@@ -15,7 +19,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/api/"],
       },
     ],
-    sitemap: "https://ilovedoc.org/sitemap.xml",
-    host: "https://ilovedoc.org",
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

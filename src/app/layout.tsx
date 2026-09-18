@@ -12,8 +12,12 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.DOMAIN ? `https://${process.env.DOMAIN}` : "https://www.ilovedoc.org");
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://ilovedoc.org"),
+  metadataBase: new URL(SITE_URL),
   alternates: {
     canonical: "/",
   },
@@ -42,7 +46,7 @@ export const metadata: Metadata = {
     title: "ilovedoc.org — Send Files Directly From Browser to Browser",
     description:
       "Files transfer directly between browsers over encrypted WebRTC. No permanent cloud storage. No complicated setup.",
-    url: "https://ilovedoc.org",
+    url: SITE_URL,
     siteName: "I Love Doc",
     type: "website",
     locale: "en_US",
