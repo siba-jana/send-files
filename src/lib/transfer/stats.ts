@@ -1,5 +1,44 @@
 /** Transfer statistics: sliding-window speed, ETA, human formatters. */
 
+/**
+ * One telemetry reading taken while a transfer is in flight. `t` is
+ * milliseconds since the transfer started; `rtt`/`bps` are null until the
+ * WebRTC stats probe / speed window makes them measurable.
+ */
+export interface TelemetrySample {
+  t: number;
+  rtt: number | null;
+  bps: number | null;
+  /** Overall progress 0..1 at sample time. */
+  pct: number;
+}
+
+/** Hard cap on retained samples; exceeding it halves resolution. */
+const TELEMETRY_MAX_SAMPLES = 240;
+
+/**
+ * Fixed-cadence sample buffer for transfer telemetry. When the cap is hit the
+ * buffer decimates (keeps every 2nd sample), so long transfers simply get a
+ * sparser — but still honest, time-stamped — series instead of unbounded
+ * memory growth.
+ */
+export class TelemetryBuffer {
+  private data: TelemetrySample[] = [];
+
+  push(sample: TelemetrySample): void {
+    const last = this.data[this.data.length - 1];
+    if (last && sample.t <= last.t) return;
+    this.data.push(sample);
+    if (this.data.length > TELEMETRY_MAX_SAMPLES) {
+      this.data = this.data.filter((_, i) => i % 2 === 0);
+    }
+  }
+
+  get samples(): readonly TelemetrySample[] {
+    return this.data;
+  }
+}
+
 export class SpeedTracker {
   private readonly windowMs: number;
   private samples: { t: number; bytes: number }[] = [];

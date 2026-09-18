@@ -67,6 +67,7 @@ import { FileThumb } from "./file-thumb";
 import { KbdHint } from "./kbd-hint";
 import { scrollToTransfer } from "./scroll-utils";
 import { SessionLog } from "./session-log";
+import { TelemetryChart } from "./telemetry-chart";
 
 /** Imperative API the TransferWidget uses for share-link / ?code= entry. */
 export interface ReceiveControllerApi {
@@ -653,6 +654,13 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                   </span>
                 )}
               </p>
+            )}
+
+            {/* Sampled speed/RTT history of the finished transfer. */}
+            {progress && duration !== null && progress.telemetry.length >= 2 && (
+              <div className="mt-6 w-full text-left">
+                <TelemetryChart samples={progress.telemetry} durationMs={duration} />
+              </div>
             )}
           </div>
 

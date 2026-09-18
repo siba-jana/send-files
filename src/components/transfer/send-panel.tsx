@@ -80,6 +80,7 @@ import { FileThumb } from "./file-thumb";
 import { KbdHint } from "./kbd-hint";
 import { scrollToTransfer } from "./scroll-utils";
 import { SessionLog } from "./session-log";
+import { TelemetryChart } from "./telemetry-chart";
 import { formatDuration } from "./format-utils";
 
 const QrDialog = dynamic(() => import("./qr-dialog"), { ssr: false });
@@ -655,6 +656,13 @@ export function SendPanel() {
                 </span>
               )}
             </p>
+          )}
+
+          {/* Sampled speed/RTT history of the finished transfer. */}
+          {progress && duration !== null && progress.telemetry.length >= 2 && (
+            <div className="mt-6 w-full text-left">
+              <TelemetryChart samples={progress.telemetry} durationMs={duration} />
+            </div>
           )}
 
           {/* Post-mortem: what the server recorded for this transfer. */}

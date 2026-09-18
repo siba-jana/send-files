@@ -30,7 +30,7 @@ import {
   type DecodedMessage,
 } from './protocol';
 import { SignalingClient, type SignalEnvelope } from './signaling';
-import { etaFromSpeed, SpeedTracker } from './stats';
+import { etaFromSpeed, SpeedTracker, TelemetryBuffer } from './stats';
 import type { TransferFileMeta } from './client-api';
 
 export type ConnectionKind = 'direct' | 'relay' | 'unknown';
@@ -71,6 +71,8 @@ export interface SenderState {
   candidateRemoteType: string | null;
   /** Wall-clock duration of the successful transfer (first byte → completion), set on completion. */
   durationMs: number | null;
+  /** Sampled speed/RTT history of the transfer (1 s cadence, decimated for long runs). */
+  telemetry: readonly import('./stats').TelemetrySample[];
 }
 
 interface FileEntry {
@@ -130,6 +132,8 @@ export class TransferSender {
   private transferStartMs: number | null = null;
   private durationMs: number | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  private telemetry = new TelemetryBuffer();
+  private telemetryTimer: ReturnType<typeof setInterval> | null = null;
   private lastPong = Date.now();
   private lastEmit = 0;
   private emitScheduled = false;
@@ -259,6 +263,12 @@ export class TransferSender {
     if (this.isFinished()) return;
     if (this.transferStartMs !== null && this.durationMs === null) {
       this.durationMs = Math.max(0, Date.now() - this.transferStartMs);
+      this.telemetry.push({
+        t: this.durationMs,
+        rtt: this.rttMs,
+        bps: this.speed.bps,
+        pct: 1,
+      });
     }
     this.cleanupPeer();
     this.signaling?.disconnect();
@@ -398,6 +408,7 @@ export class TransferSender {
     this.setPhase('transferring');
     this.transferStarted = true;
     this.startHeartbeat();
+    this.startTelemetry();
     void this.probeConnectionKind();
     this.kindProbeTimer = setInterval(() => void this.probeConnectionKind(), 10000);
 
@@ -758,6 +769,29 @@ export class TransferSender {
       clearInterval(this.kindProbeTimer);
       this.kindProbeTimer = null;
     }
+    this.stopTelemetry();
+  }
+
+  /** Sample speed/RTT/progress at a fixed cadence while the channel is open. */
+  private startTelemetry(): void {
+    this.stopTelemetry();
+    this.telemetryTimer = setInterval(() => {
+      if (this.transferStartMs === null) return;
+      const transferred = this.computeSentBytes();
+      this.telemetry.push({
+        t: Math.max(0, Date.now() - this.transferStartMs),
+        rtt: this.rttMs,
+        bps: this.speed.bps,
+        pct: this.totalBytes > 0 ? Math.min(1, transferred / this.totalBytes) : 1,
+      });
+    }, 1000);
+  }
+
+  private stopTelemetry(): void {
+    if (this.telemetryTimer) {
+      clearInterval(this.telemetryTimer);
+      this.telemetryTimer = null;
+    }
   }
 
   private async probeConnectionKind(): Promise<void> {
@@ -845,6 +879,7 @@ export class TransferSender {
       candidateLocalType: this.candidateLocalType,
       candidateRemoteType: this.candidateRemoteType,
       durationMs: this.phase === 'completed' ? this.durationMs : null,
+      telemetry: this.telemetry.samples,
     };
   }
 

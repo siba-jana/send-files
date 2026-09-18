@@ -25,7 +25,7 @@ import {
   type TransferErrorBody,
 } from './protocol';
 import { SignalingClient, type SignalEnvelope } from './signaling';
-import { etaFromSpeed, SpeedTracker } from './stats';
+import { etaFromSpeed, SpeedTracker, TelemetryBuffer } from './stats';
 import type { FileSink, SinkResult } from './sinks';
 import type { ConnectionKind, FileProgressInfo } from './sender';
 
@@ -62,6 +62,8 @@ export interface ReceiverState {
   candidateRemoteType: string | null;
   /** Wall-clock duration of the successful transfer (first byte → completion), set on completion. */
   durationMs: number | null;
+  /** Sampled speed/RTT history of the transfer (1 s cadence, decimated for long runs). */
+  telemetry: readonly import('./stats').TelemetrySample[];
   results: ReceivedFileResult[] | null;
 }
 
@@ -108,6 +110,9 @@ export class TransferReceiver {
   private candidateRemoteType: string | null = null;
   private transferStartMs: number | null = null;
   private durationMs: number | null = null;
+  private telemetry = new TelemetryBuffer();
+  private telemetryTimer: ReturnType<typeof setInterval> | null = null;
+  private kindProbeTimer: ReturnType<typeof setInterval> | null = null;
   private speed = new SpeedTracker(6000);
   private results: ReceivedFileResult[] | null = null;
   private errorText: string | null = null;
@@ -347,6 +352,7 @@ export class TransferReceiver {
       if (generation !== this.generation) return;
       if (pc.connectionState === 'connected') {
         void this.probeConnectionKind();
+        this.kindProbeTimer = setInterval(() => void this.probeConnectionKind(), 5000);
       } else if (pc.connectionState === 'failed') {
         this.onChannelClosed();
       }
@@ -428,6 +434,7 @@ export class TransferReceiver {
     if (this.phase !== 'transferring') {
       if (this.transferStartMs === null) this.transferStartMs = Date.now();
       this.setPhase('transferring');
+      this.startTelemetry();
     }
     this.chunkSize = body.chunkSize || this.chunkSize;
 
@@ -567,8 +574,36 @@ export class TransferReceiver {
     this.signaling?.disconnect();
     if (this.transferStartMs !== null && this.durationMs === null) {
       this.durationMs = Math.max(0, Date.now() - this.transferStartMs);
+      this.telemetry.push({
+        t: this.durationMs,
+        rtt: this.rttMs,
+        bps: this.speed.bps,
+        pct: 1,
+      });
     }
     this.setPhase('completed');
+  }
+
+  /** Sample speed/RTT/progress at a fixed cadence while data flows. */
+  private startTelemetry(): void {
+    if (this.telemetryTimer) return;
+    this.telemetryTimer = setInterval(() => {
+      if (this.transferStartMs === null) return;
+      const transferred = this.computeReceivedBytes();
+      this.telemetry.push({
+        t: Math.max(0, Date.now() - this.transferStartMs),
+        rtt: this.rttMs,
+        bps: this.speed.bps,
+        pct: this.totalBytes > 0 ? Math.min(1, transferred / this.totalBytes) : 1,
+      });
+    }, 1000);
+  }
+
+  private stopTelemetry(): void {
+    if (this.telemetryTimer) {
+      clearInterval(this.telemetryTimer);
+      this.telemetryTimer = null;
+    }
   }
 
   private async closeSinks(graceful: boolean): Promise<void> {
@@ -666,6 +701,7 @@ export class TransferReceiver {
       candidateLocalType: this.candidateLocalType,
       candidateRemoteType: this.candidateRemoteType,
       durationMs: this.phase === 'completed' ? this.durationMs : null,
+      telemetry: this.telemetry.samples,
       results: this.results,
     };
   }
@@ -705,6 +741,10 @@ export class TransferReceiver {
   }
 
   private teardownPeer(): void {
+    if (this.kindProbeTimer) {
+      clearInterval(this.kindProbeTimer);
+      this.kindProbeTimer = null;
+    }
     const dc = this.dc;
     const pc = this.pc;
     this.dc = null;
@@ -728,6 +768,7 @@ export class TransferReceiver {
 
   private cleanupPeer(): void {
     this.teardownPeer();
+    this.stopTelemetry();
     this.stopWatchdog();
     if (this.offerWatchdog) {
       clearTimeout(this.offerWatchdog);

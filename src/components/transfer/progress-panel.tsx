@@ -16,6 +16,7 @@ import type { SenderState } from "@/lib/transfer/sender";
 import type { ReceiverState } from "@/lib/transfer/receiver";
 import { ConnectionBadge } from "./connection-badge";
 import { FileIcon } from "./file-icon";
+import { TelemetrySparkline } from "./telemetry-chart";
 
 export interface ProgressPanelProps {
   progress: SenderState | ReceiverState;
@@ -183,6 +184,9 @@ export function ProgressPanel({ progress, variant, className }: ProgressPanelPro
             candidateLocalType={progress.candidateLocalType}
             candidateRemoteType={progress.candidateRemoteType}
           />
+          {progress.telemetry.length >= 2 && (
+            <TelemetrySparkline samples={progress.telemetry} />
+          )}
         </div>
 
         {/* per-file list */}
