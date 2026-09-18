@@ -11,7 +11,9 @@ async function main() {
   const response = await zai.images.generations.create({
     prompt:
       "Social media share card for a file transfer web app. Two minimalist white browser windows facing each other on a clean off-white background, glowing rose-red heart between them, small paper documents flying from left browser to right browser along a dotted arc, soft rose-red accent color, subtle radial gradient glow, modern flat vector illustration style, generous whitespace, elegant and professional, large bold modern sans-serif text 'I Love Doc' centered near the bottom, high quality, detailed",
-    size: "1216x640",
+    // The SDK's TS types only list preset sizes, but the API accepts any
+    // 32-multiple between 512–2880px — 1216x640 is the OG 1.9:1 ratio.
+    size: "1216x640" as "1024x1024",
   });
   const base64 = response.data[0].base64;
   if (!base64) throw new Error("No image data in response");

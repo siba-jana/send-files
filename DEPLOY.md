@@ -125,3 +125,20 @@ raw SQL with SQLite-specific time handling — see
 - **Rate limits** are in-memory per process (see SPEC §4). Multi-instance
   deployments should front them with a shared limiter or accept per-node
   granularity.
+
+## 7. Sandbox-only: keeping the dev server alive
+
+This sandbox reaps every process spawned directly from agent tool calls at
+tool-call end — plain `nohup … &` does NOT survive. The working pattern is a
+double-fork (an intermediate `sh -c '… &'` exits immediately, orphaning the
+child to PID 1). The dev server here runs under a self-healing watchdog
+started exactly like this:
+
+```bash
+sh -c 'setsid nohup sh -c "while true; do node_modules/.bin/next dev -p 3000 >> /home/z/my-project/dev.log 2>&1; sleep 5; done" </dev/null >/dev/null 2>&1 &'
+```
+
+If `curl http://localhost:3000` ever fails, re-run that one command. Also
+keep an eye on memory: accumulated agent-browser Chrome daemons can OOM-kill
+next-server (4 GB limit) — close browser sessions when finished and kill
+orphaned Chrome processes (PPID 1).

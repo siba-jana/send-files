@@ -124,17 +124,30 @@ export function TransferWidget({ className }: TransferWidgetProps) {
           onValueChange={(value) => setMode(value === "receive" ? "receive" : "send")}
           className="gap-6"
         >
-          <TabsList className="grid h-13 w-full grid-cols-2 rounded-xl">
+          {/* Sliding active-tab thumb: glides between the two triggers
+              (transform-only animation — cheap, and disabled under
+              prefers-reduced-motion). Triggers sit above it (z-10) and keep
+              their own backgrounds transparent when active so the thumb
+              provides the "active pill". */}
+          <TabsList className="relative grid h-13 w-full grid-cols-2 rounded-xl">
+            <span
+              aria-hidden="true"
+              className={`pointer-events-none absolute inset-y-1 left-1 z-0 w-[calc(50%_-_0.25rem)] rounded-lg bg-background shadow-sm ring-1 ring-black/[0.04] transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-input/30 dark:ring-white/[0.06] dark:shadow-none ${
+                mode === "receive"
+                  ? "translate-x-[calc(50%_-_0.25rem)]"
+                  : "translate-x-0"
+              }`}
+            />
             <TabsTrigger
               value="send"
-              className="min-h-11 rounded-lg text-sm font-medium sm:text-base"
+              className="relative z-10 min-h-11 rounded-lg text-sm font-medium sm:text-base data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-transparent [&[data-state=active]_svg]:text-rose-600 dark:[&[data-state=active]_svg]:text-rose-400"
             >
               <Send aria-hidden="true" />
               Send Files
             </TabsTrigger>
             <TabsTrigger
               value="receive"
-              className="min-h-11 rounded-lg text-sm font-medium sm:text-base"
+              className="relative z-10 min-h-11 rounded-lg text-sm font-medium sm:text-base data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-transparent [&[data-state=active]_svg]:text-rose-600 dark:[&[data-state=active]_svg]:text-rose-400"
             >
               <Download aria-hidden="true" />
               Receive Files

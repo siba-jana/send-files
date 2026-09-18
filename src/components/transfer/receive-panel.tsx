@@ -2,6 +2,7 @@
 
 import {
   useEffect,
+  useRef,
   useState,
   useSyncExternalStore,
   type ClipboardEvent,
@@ -18,6 +19,7 @@ import {
   Download,
   FileArchive,
   HardDrive,
+  History,
   Link2,
   LoaderCircle,
   Lock,
@@ -27,6 +29,7 @@ import {
   TriangleAlert,
   User,
   WifiOff,
+  X,
 } from "lucide-react";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -49,6 +52,13 @@ import {
   useReceiveTransfer,
 } from "@/hooks/use-receive";
 import { formatBytes, formatSpeed } from "@/lib/transfer/stats";
+import {
+  addRecentReceived,
+  clearRecentReceived,
+  useRecentReceived,
+  type RecentReceivedStatus,
+} from "@/lib/transfer/received";
+import { formatRelativeTime } from "@/lib/transfer/recent";
 import { formatDuration } from "./format-utils";
 import { buildZipBlob, canZip } from "@/lib/transfer/zip";
 import { ConnectionSteps, ProgressPanel } from "./progress-panel";
@@ -134,6 +144,24 @@ async function copyText(text: string, successMessage: string): Promise<void> {
   }
 }
 
+/** Small colored status dot for received-history rows. */
+function RecentStatusIcon({ status }: { status: RecentReceivedStatus }) {
+  const className = "size-2 shrink-0 rounded-full";
+  switch (status) {
+    case "completed":
+      return <span aria-hidden="true" className={cn(className, "bg-emerald-500")} />;
+    case "failed":
+      return <span aria-hidden="true" className={cn(className, "bg-destructive")} />;
+    default:
+      return <span aria-hidden="true" className={cn(className, "bg-muted-foreground/50")} />;
+  }
+}
+
+/** "482917" → "482 917" */
+function formatCode(code: string): string {
+  return code.length === 6 ? `${code.slice(0, 3)} ${code.slice(3)}` : code;
+}
+
 export function ReceivePanel({ registerController }: ReceivePanelProps) {
   const {
     supported,
@@ -170,6 +198,40 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
   const countdown = useCountdown(
     phase === "confirm" || phase === "unlocking" ? meta?.expiresAt : null,
   );
+
+  // Received history: record each transfer exactly once when it reaches a
+  // terminal phase (localStorage + store notify — no setState here). Only
+  // privacy-safe fields the receiver already saw: sender display name,
+  // counts, sizes, outcome, plus the share code when joined by code.
+  const receivedHistory = useRecentReceived();
+  const recordedTokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      phase !== "completed" &&
+      phase !== "cancelled" &&
+      phase !== "failed"
+    ) {
+      return;
+    }
+    if (!meta || recordedTokenRef.current === meta.token) return;
+    recordedTokenRef.current = meta.token;
+    const enteredCode = normalizeCode(code);
+    const results = progress?.results ?? [];
+    addRecentReceived({
+      code: enteredCode.length === 6 ? enteredCode : null,
+      senderName: meta.senderName?.trim() || null,
+      fileCount:
+        phase === "completed" && results.length > 0
+          ? results.length
+          : meta.fileCount,
+      totalBytes:
+        phase === "completed" && results.length > 0
+          ? results.reduce((acc, r) => acc + r.size, 0)
+          : meta.totalBytes,
+      createdAt: Date.now(),
+      status: phase as RecentReceivedStatus,
+    });
+  }, [phase, meta, code, progress]);
 
   // Expose lookup entry points to the orchestrating widget (share links etc.).
   useEffect(() => {
@@ -879,6 +941,72 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
           Ask the sender for a 6-digit code or a link. Files arrive straight
           from their browser, SHA-256 verified.
         </p>
+
+        {/* Received history (this browser only, privacy-safe fields). */}
+        {receivedHistory.length > 0 && (
+          <div className="mt-5 rounded-xl border bg-muted/20 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <History aria-hidden="true" className="size-4" />
+                Recently received
+                <span className="text-xs font-normal">
+                  &nbsp;&bull; this browser only
+                </span>
+              </p>
+              <button
+                type="button"
+                aria-label="Clear received history"
+                onClick={clearRecentReceived}
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-destructive/10 hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <X aria-hidden="true" className="size-3.5" />
+              </button>
+            </div>
+            <ul className="mt-2.5 space-y-1">
+              {receivedHistory.map((entry) => (
+                <li
+                  key={`${entry.createdAt}-${entry.code ?? "link"}`}
+                  className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/60"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <RecentStatusIcon status={entry.status} />
+                    <span
+                      className="min-w-0 truncate text-sm font-medium"
+                      title={
+                        entry.code
+                          ? `Transfer code ${entry.code}`
+                          : (entry.senderName ?? undefined)
+                      }
+                    >
+                      {entry.code ? (
+                        <span className="font-mono tabular-nums">
+                          {formatCode(entry.code)}
+                        </span>
+                      ) : entry.senderName ? (
+                        <>
+                          <User
+                            aria-hidden="true"
+                            className="me-1 inline size-3.5 -mt-0.5 text-muted-foreground"
+                          />
+                          {entry.senderName}
+                        </>
+                      ) : (
+                        "Transfer"
+                      )}
+                    </span>
+                    <span className="shrink-0 truncate text-xs text-muted-foreground tabular-nums">
+                      {entry.fileCount} file{entry.fileCount === 1 ? "" : "s"}{" "}
+                      &bull; {formatBytes(entry.totalBytes)}
+                    </span>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatRelativeTime(entry.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
