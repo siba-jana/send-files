@@ -1,10 +1,11 @@
 "use client"
 
 import * as React from "react"
-import { Menu, Moon, Send, Sun, X } from "lucide-react"
+import { Menu, Send, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { Logo } from "@/components/site/logo"
+import { ThemeToggle } from "@/components/site/theme-toggle"
 
 const NAV_LINKS = [
   { href: "#transfer", label: "Send" },
@@ -33,17 +34,6 @@ function startTransfer(mode: "send" | "receive") {
 export function SiteHeader() {
   const [menuOpen, setMenuOpen] = React.useState(false)
 
-  // Apply persisted (or system) theme after mount to avoid hydration mismatch.
-  React.useEffect(() => {
-    const stored = window.localStorage.getItem("theme")
-    const dark =
-      stored === "dark" ||
-      (stored !== "light" &&
-        window.matchMedia("(prefers-color-scheme: dark)").matches)
-    document.documentElement.classList.toggle("dark", dark)
-    document.documentElement.style.colorScheme = dark ? "dark" : "light"
-  }, [])
-
   // Close the mobile menu with Escape.
   React.useEffect(() => {
     if (!menuOpen) return
@@ -53,13 +43,6 @@ export function SiteHeader() {
     window.addEventListener("keydown", onKeyDown)
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [menuOpen])
-
-  const toggleTheme = () => {
-    const dark = !document.documentElement.classList.contains("dark")
-    document.documentElement.classList.toggle("dark", dark)
-    document.documentElement.style.colorScheme = dark ? "dark" : "light"
-    window.localStorage.setItem("theme", dark ? "dark" : "light")
-  }
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
@@ -88,22 +71,7 @@ export function SiteHeader() {
         </nav>
 
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            className="relative size-11 text-muted-foreground hover:text-foreground md:size-9"
-          >
-            <Sun
-              aria-hidden="true"
-              className="size-5 rotate-0 scale-100 transition-transform duration-300 dark:-rotate-90 dark:scale-0"
-            />
-            <Moon
-              aria-hidden="true"
-              className="absolute size-5 rotate-90 scale-0 transition-transform duration-300 dark:rotate-0 dark:scale-100"
-            />
-          </Button>
+          <ThemeToggle />
 
           <Button
             size="sm"

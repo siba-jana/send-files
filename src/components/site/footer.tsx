@@ -1,11 +1,5 @@
 import { Logo } from "@/components/site/logo"
-
-const FOOTER_LINKS = [
-  { href: "#transfer", label: "Send" },
-  { href: "#how-it-works", label: "How it works" },
-  { href: "#security", label: "Security" },
-  { href: "#faq", label: "FAQ" },
-] as const
+import { FooterNav } from "@/components/site/footer-nav"
 
 export function Footer() {
   const year = new Date().getFullYear()
@@ -29,20 +23,7 @@ export function Footer() {
             </p>
           </div>
 
-          <nav aria-label="Footer">
-            <ul className="flex flex-wrap items-center gap-x-1 gap-y-1">
-              {FOOTER_LINKS.map((link) => (
-                <li key={link.href}>
-                  <a
-                    href={link.href}
-                    className="inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring md:min-h-0"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </nav>
+          <FooterNav />
         </div>
 
         <div className="mt-8 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">

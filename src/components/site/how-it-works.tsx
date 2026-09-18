@@ -1,7 +1,14 @@
 "use client"
 
 import { MotionConfig, motion } from "framer-motion"
-import { BadgeCheck, FolderUp, Network, Share2 } from "lucide-react"
+import {
+  ArrowRight,
+  BadgeCheck,
+  FolderUp,
+  HardDrive,
+  Network,
+  Share2,
+} from "lucide-react"
 
 import {
   Card,
@@ -320,6 +327,63 @@ export function HowItWorks() {
               </svg>
             </CardContent>
           </Card>
+          {/* Deeper guides: contextual links to the dedicated landing pages. */}
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <motion.a
+              href="/how-it-works"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+              className="group/guide flex flex-col rounded-2xl border bg-card p-5 shadow-sm outline-none transition-[border-color,box-shadow] duration-300 hover:border-rose-200 hover:shadow-lg hover:shadow-rose-600/5 focus-visible:ring-2 focus-visible:ring-ring dark:hover:border-rose-500/30"
+            >
+              <span className="inline-flex items-center gap-2 text-sm font-semibold">
+                <Network
+                  aria-hidden="true"
+                  className="size-4 text-rose-600 dark:text-rose-500"
+                />
+                The full technical guide
+              </span>
+              <span className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                Handshake, encryption, chunking, teardown — the complete
+                story of a transfer.
+              </span>
+              <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-500">
+                Read how it works
+                <ArrowRight
+                  aria-hidden="true"
+                  className="size-4 transition-transform duration-300 group-hover/guide:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/guide:translate-x-0"
+                />
+              </span>
+            </motion.a>
+            <motion.a
+              href="/send-large-files"
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true, margin: "-40px" }}
+              transition={{ duration: 0.5, delay: 0.08, ease: "easeOut" }}
+              className="group/guide flex flex-col rounded-2xl border bg-card p-5 shadow-sm outline-none transition-[border-color,box-shadow] duration-300 hover:border-rose-200 hover:shadow-lg hover:shadow-rose-600/5 focus-visible:ring-2 focus-visible:ring-ring dark:hover:border-rose-500/30"
+            >
+              <span className="inline-flex items-center gap-2 text-sm font-semibold">
+                <HardDrive
+                  aria-hidden="true"
+                  className="size-4 text-rose-600 dark:text-rose-500"
+                />
+                Sending something huge?
+              </span>
+              <span className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+                Up to 10 TB per file, streamed direct — see the large-file
+                guide.
+              </span>
+              <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-500">
+                Send large files
+                <ArrowRight
+                  aria-hidden="true"
+                  className="size-4 transition-transform duration-300 group-hover/guide:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/guide:translate-x-0"
+                />
+              </span>
+            </motion.a>
+          </div>
         </div>
       </section>
     </MotionConfig>
