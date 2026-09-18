@@ -115,6 +115,35 @@ export function useSendTransfer() {
     setPhase((p) => (p === 'idle' || p === 'ready' ? 'idle' : p));
   }, []);
 
+  /** Move a file up (-1) or down (+1) in the send order — the
+   * keyboard/mobile-accessible reordering path. No-op at the boundaries. */
+  const moveFile = useCallback((key: string, direction: -1 | 1) => {
+    setFiles((prev) => {
+      const from = prev.findIndex((f) => f.key === key);
+      const to = from + direction;
+      if (from === -1 || to < 0 || to >= prev.length) return prev;
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }, []);
+
+  /** Live drag reorder: move `fromKey` to `toKey`'s slot. The list order is
+   * the delivery order (TRANSFER_INIT follows the array), so this controls
+   * the sequence the receiver gets. */
+  const reorderFiles = useCallback((fromKey: string, toKey: string) => {
+    setFiles((prev) => {
+      const from = prev.findIndex((f) => f.key === fromKey);
+      const to = prev.findIndex((f) => f.key === toKey);
+      if (from === -1 || to === -1 || from === to) return prev;
+      const next = [...prev];
+      const [item] = next.splice(from, 1);
+      next.splice(to, 0, item);
+      return next;
+    });
+  }, []);
+
   const setOption = useCallback(<K extends keyof SendOptions>(key: K, value: SendOptions[K]) => {
     setOptions((prev) => ({ ...prev, [key]: value }));
   }, []);
@@ -258,6 +287,8 @@ export function useSendTransfer() {
     addFiles,
     removeFile,
     clearFiles,
+    moveFile,
+    reorderFiles,
     setOption,
     create,
     cancel,

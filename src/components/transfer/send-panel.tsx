@@ -12,6 +12,8 @@ import {
 import dynamic from "next/dynamic";
 import { toast } from "sonner";
 import {
+  ChevronDown,
+  ChevronUp,
   CircleCheckBig,
   CircleX,
   Clock,
@@ -19,6 +21,7 @@ import {
   Copy,
   FolderUp,
   Gauge,
+  GripVertical,
   History,
   Hourglass,
   Link2,
@@ -252,6 +255,8 @@ export function SendPanel() {
     addFiles,
     removeFile,
     clearFiles,
+    moveFile,
+    reorderFiles,
     setOption,
     create,
     cancel,
@@ -276,6 +281,12 @@ export function SendPanel() {
   const [dragOver, setDragOver] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [optionsOpen, setOptionsOpen] = useState(false);
+
+  // Row-reorder drag state: key of the row being dragged (null when idle).
+  // Reordering is live (rows swap on dragenter); drop/dragend just finalize.
+  const [dragKey, setDragKey] = useState<string | null>(null);
+  /** Screen-reader announcement for the last reorder ("Moved report.pdf to position 2"). */
+  const [moveAnnouncement, setMoveAnnouncement] = useState("");
 
   const countdown = useCountdown(phase === "waiting" ? info?.expiresAt : null);
 
@@ -351,6 +362,9 @@ export function SendPanel() {
   const handleDrop = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragOver(false);
+    // Row-reorder drags carry no files — ignore them here (the rows
+    // handle their own drop).
+    if (dragKey) return;
     const dropped = Array.from(e.dataTransfer?.files ?? []);
     if (dropped.length > 0) addFiles(dropped);
   };
@@ -772,7 +786,8 @@ export function SendPanel() {
         <div
           onDragOver={(e) => {
             e.preventDefault();
-            setDragOver(true);
+            // Don't light up the OS-file dropzone while reordering rows.
+            if (!dragKey) setDragOver(true);
           }}
           onDragLeave={(e) => {
             if (!e.currentTarget.contains(e.relatedTarget as Node | null)) {
@@ -873,14 +888,49 @@ export function SendPanel() {
         {files.length > 0 && (
           <div className="mt-6">
             <ul
-              aria-label="Files to send"
+              aria-label="Files to send, in delivery order"
               className="max-h-72 divide-y overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:transparent"
             >
-              {files.map(({ key, file }) => (
+              {files.map(({ key, file }, index) => (
                 <li
                   key={key}
-                  className="flex items-center gap-3 py-2.5 first:pt-0"
+                  draggable={!creating && files.length > 1}
+                  onDragStart={(e) => {
+                    setDragKey(key);
+                    e.dataTransfer.effectAllowed = "move";
+                    // Keep drag data minimal — some browsers require non-empty
+                    // data for drag events to fire reliably.
+                    e.dataTransfer.setData("text/plain", key);
+                  }}
+                  onDragEnter={() => {
+                    if (dragKey && dragKey !== key) {
+                      reorderFiles(dragKey, key);
+                    }
+                  }}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    const from = e.dataTransfer.getData("text/plain");
+                    if (from && from !== key) reorderFiles(from, key);
+                    setDragKey(null);
+                  }}
+                  onDragEnd={() => setDragKey(null)}
+                  className={cn(
+                    "group/row flex items-center gap-2 py-2.5 transition-opacity first:pt-0 sm:gap-3",
+                    dragKey === key && "opacity-40",
+                  )}
                 >
+                  {/* Drag handle — doubles as the affordance that the row
+                      (not the thumbnail) is draggable. Cursor signals grab. */}
+                  {files.length > 1 && (
+                    <span
+                      aria-hidden="true"
+                      className="flex size-6 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground/60 transition-colors group-hover/row:text-foreground active:cursor-grabbing dark:text-muted-foreground/85"
+                      title="Drag to reorder"
+                    >
+                      <GripVertical className="size-4" />
+                    </span>
+                  )}
                   <SendFileThumb file={file} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium" title={file.name}>
@@ -890,6 +940,46 @@ export function SendPanel() {
                       {formatBytes(file.size)}
                     </p>
                   </div>
+                  {/* Move up/down — the keyboard + touch accessible reorder
+                      path (HTML5 drag doesn't work with either). */}
+                  {files.length > 1 && (
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground dark:text-muted-foreground/90 hover:text-foreground"
+                        aria-label={`Move ${file.name} up`}
+                        title="Move up"
+                        disabled={creating || index === 0}
+                        onClick={() => {
+                          moveFile(key, -1);
+                          setMoveAnnouncement(
+                            `Moved ${file.name} to position ${index}`,
+                          );
+                        }}
+                      >
+                        <ChevronUp aria-hidden="true" className="size-4" />
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="size-8 text-muted-foreground dark:text-muted-foreground/90 hover:text-foreground"
+                        aria-label={`Move ${file.name} down`}
+                        title="Move down"
+                        disabled={creating || index === files.length - 1}
+                        onClick={() => {
+                          moveFile(key, 1);
+                          setMoveAnnouncement(
+                            `Moved ${file.name} to position ${index + 2}`,
+                          );
+                        }}
+                      >
+                        <ChevronDown aria-hidden="true" className="size-4" />
+                      </Button>
+                    </div>
+                  )}
                   <Button
                     type="button"
                     variant="ghost"
@@ -908,6 +998,11 @@ export function SendPanel() {
               <p className="text-sm text-muted-foreground tabular-nums">
                 {files.length} file{files.length === 1 ? "" : "s"} •{" "}
                 {formatBytes(totalBytes)}
+                {files.length > 1 && (
+                  <span className="ms-2 hidden text-xs text-muted-foreground dark:text-muted-foreground/80 sm:inline">
+                    Sent top to bottom — drag to reorder
+                  </span>
+                )}
               </p>
               <Button
                 type="button"
@@ -921,6 +1016,11 @@ export function SendPanel() {
                 Clear
               </Button>
             </div>
+            {/* Screen-reader feedback for reorders (drag has no native
+                announcement; the buttons above set this too). */}
+            <p aria-live="polite" className="sr-only">
+              {moveAnnouncement}
+            </p>
           </div>
         )}
 

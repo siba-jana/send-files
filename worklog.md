@@ -313,3 +313,25 @@ Stage Summary:
 - CRITICAL for next agents: (1) dev-server restart recipe changed — use the double-fork watchdog command above, NOT plain nohup; (2) OOM risk exists when many chrome daemons accumulate — close agent-browser sessions when done, kill orphans (`ps -eo pid,ppid,cmd | rg chrome | awk '$2==1'`); (3) Tailwind v4 translate = native `translate` property.
 - All prior flows regression-verified this round (code entry, transfer, SHA-256, session logs, stats, ZIP button).
 - Next-phase ideas: 1) RTT sparkline in completed card (engine already exposes stats); 2) sender file reordering (drag rows) pre-create; 3) protocol v2 wire compression (CompressionStream before chunking); 4) i18n groundwork; 5) production CSP hardening when leaving dev mode.
+
+---
+Task ID: 12
+Agent: main (Z.ai Code)
+Task: Scheduled review round — QA + sender file-list reordering (drag + accessible move) + dark contrast polish
+
+Work Log:
+- Status assessment: ALL services healthy and — critically — the Task-11 watchdog SURVIVED between rounds (dev :3000 = 200, PID 22437 still the watchdog shell; signaling :3003 healthy; gateway :81 healthy; no chrome orphans; memory OK). The double-fork persistence pattern is proven across round boundaries.
+- QA E2E (two fresh sessions s12/r12 via gateway :81): golden path (gamma.txt + delta.bin, code 802 687) — both sides completed, SHA-256 verified ✓, duration pills ✓, no console errors. Verified the Task-11 features still intact (received-history rendered on receiver after reset).
+- Feature (worklog next-phase item #2): **sender file-list reordering before create** —
+  - Hook (use-send.ts): `moveFile(key, ±1)` (keyboard/touch path) + `reorderFiles(fromKey, toKey)` (live drag path); both boundary-guarded, immutable array updates. List order = TRANSFER_INIT order = delivery order.
+  - UI (send-panel.tsx): rows draggable (HTML5 DnD with live swap on dragenter — rows reorder while dragging; drop/dragend finalize); GripVertical drag handle (cursor-grab/grabbing, brightens on row hover); ChevronUp/ChevronDown per-row buttons with aria-labels ("Move X up/down") + disabled at boundaries (accessible path — HTML5 DnD works for neither keyboard nor touch); dragging row dims to opacity-40; "Sent top to bottom — drag to reorder" hint (≥2 files, sm+); sr-only aria-live region announces moves ("Moved X to position N"); ul aria-label now "Files to send, in delivery order".
+  - Conflict guards: outer OS-file dropzone ignores row drags (handleDrop early-returns when dragKey set; container highlight suppressed during internal drags). Row drags carry text/plain key data (non-empty dataTransfer for reliable event firing).
+  - VERIFIED E2E: move-button click reorders (snapshot order changes); agent-browser `drag` command reorders (HTML5 events fire); full transfer with reordered list (delta→gamma→alpha, code 064 726) → receiver's completed list shows EXACTLY the reordered sequence, all 3 SHA-256 verified. Feature does what it promises: controls delivery order.
+- Styling polish: VLM dark-mode QA caught LOW CONTRAST on handle/chevrons (muted/50 & /70 invisible on dark bg) → fixed to /60+dark:/85 (handle) and full muted + dark:/90 (chevrons) + hint dark:/80; re-verified by VLM ("clearly visible"). Light mode unchanged. VLM also confirmed handle/buttons/hint all present + "no misalignment or crowding".
+- Final checks: console clean both sessions; lint CLEAN; tsc CLEAN; dev.log clean; sessions closed; DB test rows cleaned (stats honest); memory freed.
+
+Stage Summary:
+- Services: dev :3000 under persistent watchdog (survived round boundary — pattern validated), signaling :3003, gateway :81 — all healthy.
+- New user-facing capability: reorder files before sending (drag rows live + accessible up/down buttons + SR announcements); order provably controls receiver-side delivery order (E2E-verified).
+- QA verdict: no bugs found this round (previous rounds' features regression-verified clean).
+- Next-phase ideas: 1) RTT sparkline in completed card (engine already exposes stats); 2) protocol v2 wire compression (CompressionStream before chunking); 3) i18n groundwork; 4) production CSP hardening when leaving dev mode; 5) receiver-side ZIP entry-name collision handling edge cases (uses uniqueEntryName already — verify with same-name files E2E).
