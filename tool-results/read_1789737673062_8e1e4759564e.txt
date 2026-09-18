@@ -1,0 +1,663 @@
+     1→import type { Metadata } from "next"
+     2→import {
+     3→  Archive,
+     4→  ArrowLeftRight,
+     5→  ArrowRight,
+     6→  BadgeCheck,
+     7→  BookOpenText,
+     8→  Check,
+     9→  EyeOff,
+    10→  Radio,
+    11→  Route,
+    12→  Send,
+    13→  ShieldCheck,
+    14→  X,
+    15→  Zap,
+    16→} from "lucide-react"
+    17→
+    18→import {
+    19→  Card,
+    20→  CardContent,
+    21→  CardDescription,
+    22→  CardHeader,
+    23→  CardTitle,
+    24→} from "@/components/ui/card"
+    25→import { Button } from "@/components/ui/button"
+    26→import { Reveal } from "@/components/site/reveal"
+    27→import { Footer } from "@/components/site/footer"
+    28→import { LandingNav } from "@/components/site/landing/landing-nav"
+    29→import {
+    30→  LandingFaq,
+    31→  type LandingFaqItem,
+    32→} from "@/components/site/landing/landing-faq"
+    33→import { LandingCta } from "@/components/site/landing/landing-cta"
+    34→import { JsonLd } from "@/components/site/landing/json-ld"
+    35→
+    36→const SITE_URL = "https://ilovedoc.org"
+    37→const PAGE_URL = `${SITE_URL}/how-it-works`
+    38→
+    39→const PAGE_TITLE = "How Browser-to-Browser File Transfer Works"
+    40→const PAGE_DESCRIPTION =
+    41→  "The full technical story of I Love Doc: WebRTC handshakes, DTLS encryption, chunked streaming with SHA-256 verification — and exactly what our servers never touch."
+    42→
+    43→export const metadata: Metadata = {
+    44→  title: PAGE_TITLE,
+    45→  description: PAGE_DESCRIPTION,
+    46→  alternates: {
+    47→    canonical: "/how-it-works",
+    48→  },
+    49→  openGraph: {
+    50→    title: PAGE_TITLE,
+    51→    description: PAGE_DESCRIPTION,
+    52→    url: PAGE_URL,
+    53→    siteName: "I Love Doc",
+    54→    type: "website",
+    55→    locale: "en_US",
+    56→    images: [
+    57→      {
+    58→        url: "/og-image.jpg",
+    59→        width: 1216,
+    60→        height: 640,
+    61→        alt: "I Love Doc — files flying between two browsers over a direct encrypted connection",
+    62→      },
+    63→    ],
+    64→  },
+    65→  twitter: {
+    66→    card: "summary_large_image",
+    67→    title: PAGE_TITLE,
+    68→    description: PAGE_DESCRIPTION,
+    69→    images: ["/og-image.jpg"],
+    70→  },
+    71→}
+    72→
+    73→const FAQ_ITEMS: readonly LandingFaqItem[] = [
+    74→  {
+    75→    q: "Do I need to install anything?",
+    76→    a: "No. Everything — the transfer engine, encryption, verification — is built into modern browsers via WebRTC. Chrome, Edge, Firefox, and Safari all work, on desktop and mobile.",
+    77→  },
+    78→  {
+    79→    q: "Can the relay read my files?",
+    80→    a: "No. The relay (TURN) only forwards packets. The DTLS encryption is negotiated directly between the two browsers, and the keys never leave them — so the relay sees encrypted bytes it cannot decrypt.",
+    81→  },
+    82→  {
+    83→    q: "Why a 6-digit code instead of just a link?",
+    84→    a: "Both work. The code is easy to read out over a phone call; the share link and QR code do the same job in one tap. Either way, it expires with the transfer.",
+    85→  },
+    86→  {
+    87→    q: "What data do you keep after a transfer?",
+    88→    a: "Only what coordination required: the session record — file names and sizes — until it expires, plus anonymous aggregate counters for the public stats. Never file contents; on the direct path there are none to keep.",
+    89→  },
+    90→  {
+    91→    q: "Can someone intercept the transfer?",
+    92→    a: "They would have to break DTLS — the same standard that protects HTTPS — using keys that exist only inside the two browsers for that session. An optional password adds another gate before any file metadata is even released.",
+    93→  },
+    94→  {
+    95→    q: "Why WebRTC instead of plain HTTPS uploads?",
+    96→    a: "HTTPS uploads put a server in the middle: your file crosses the internet twice and lands on storage. WebRTC DataChannels let browsers talk directly — one hop, no storage — while the protocol handles the messy networking (NAT traversal, reconnects) for us.",
+    97→  },
+    98→] as const
+    99→
+   100→const PHASES = [
+   101→  {
+   102→    n: "01",
+   103→    icon: Radio,
+   104→    title: "The handshake",
+   105→    duration: "seconds",
+   106→    intro:
+   107→      "Two strangers on the internet become peers. The server’s only job is the introduction.",
+   108→    steps: [
+   109→      {
+   110→        title: "You pick files",
+   111→        text: "File metadata — names, sizes, types — is registered with the coordination server. Never the contents. You get a 6-digit code, a share link, and a QR code.",
+   112→      },
+   113→      {
+   114→        title: "They enter the code",
+   115→        text: "The recipient’s browser asks the server for an introduction. If you set a password, it’s checked first — stored only as a salted hash — before any metadata is released.",
+   116→      },
+   117→      {
+   118→        title: "Browsers get introduced",
+   119→        text: "Over a signaling channel, the two browsers exchange connection candidates (SDP offer/answer and ICE candidates). The server is the matchmaker — it passes messages, not files.",
+   120→      },
+   121→      {
+   122→        title: "An encrypted channel opens",
+   123→        text: "WebRTC negotiates DTLS — the same encryption family that protects HTTPS — with fresh keys that exist only inside the two browsers.",
+   124→      },
+   125→    ],
+   126→  },
+   127→  {
+   128→    n: "02",
+   129→    icon: Zap,
+   130→    title: "The transfer",
+   131→    duration: "minutes to hours",
+   132→    intro:
+   133→      "Bytes flow peer to peer, in order, with receipts — the boring reliability of a courier, at network speed.",
+   134→    steps: [
+   135→      {
+   136→        title: "Files stream in chunks",
+   137→        text: "Each file is read from disk in chunks of up to 64 KiB and pushed over the DataChannel. Memory use stays flat, whether the file is 10 MB or 10 TB.",
+   138→      },
+   139→      {
+   140→        title: "Every chunk is confirmed",
+   141→        text: "Each chunk carries a CRC-32 and the receiver ACKs progress in batches. The sender paces itself on the receiver’s buffer — fast links fly, weak links stay stable.",
+   142→      },
+   143→      {
+   144→        title: "Drops don’t restart",
+   145→        text: "If the connection breaks, both sides reconnect and the receiver asks to resume from its last confirmed chunk. Files already verified are skipped entirely.",
+   146→      },
+   147→      {
+   148→        title: "SHA-256 seals the deal",
+   149→        text: "Both sides hash the bytes as they flow. At completion the digests must match — or the transfer fails loudly rather than deliver corruption.",
+   150→      },
+   151→    ],
+   152→  },
+   153→  {
+   154→    n: "03",
+   155→    icon: Archive,
+   156→    title: "The teardown",
+   157→    duration: "on your schedule",
+   158→    intro:
+   159→      "Delivery is confirmed, the session expires, and there is nothing left to clean up.",
+   160→    steps: [
+   161→      {
+   162→        title: "Delivery confirmed",
+   163→        text: "The receiver’s browser saves each verified file to disk — individually, or as a single ZIP when the total is under 4 GB.",
+   164→      },
+   165→      {
+   166→        title: "The session expires",
+   167→        text: "Coordination metadata lives exactly as long as you choose: 1 hour to 7 days, 24 hours by default. Then it’s deleted.",
+   168→      },
+   169→      {
+   170→        title: "Nothing lingers",
+   171→        text: "On the direct path, file bytes never existed on any server. There’s nothing to breach because there’s nothing stored.",
+   172→      },
+   173→    ],
+   174→  },
+   175→] as const
+   176→
+   177→const SERVER_SEES = [
+   178→  "The 6-digit code, its expiry, and when it was used",
+   179→  "File names, sizes, and types — the manifest the receiver sees",
+   180→  "Connection events for the session log (joined, completed, cancelled)",
+   181→  "Anonymous aggregate counters for the public stats — numbers, never contents",
+   182→] as const
+   183→
+   184→const SERVER_NEVER = [
+   185→  "File contents, on the direct path — bytes go browser to browser",
+   186→  "DTLS encryption keys — they live only in the two browsers",
+   187→  "Your password — only a salted hash is ever stored",
+   188→  "An account or a profile — there are none",
+   189→] as const
+   190→
+   191→const PROTOCOL_FACTS = [
+   192→  {
+   193→    term: "protocol",
+   194→    def: "A compact binary protocol over WebRTC DataChannels: 23-byte chunk headers with per-chunk CRC-32, batched acknowledgements, and explicit resume requests after reconnects.",
+   195→  },
+   196→  {
+   197→    term: "chunking",
+   198→    def: "Chunks sized to what the network path allows (up to 64 KiB). The sender pauses when its buffer fills and resumes when it drains — backpressure, the boring kind of clever.",
+   199→  },
+   200→  {
+   201→    term: "integrity",
+   202→    def: "Incremental SHA-256 on both sides, compared at completion. Verified files are marked and never re-sent after a reconnect.",
+   203→  },
+   204→  {
+   205→    term: "telemetry",
+   206→    def: "During a transfer, both browsers sample real WebRTC statistics — throughput and round-trip time. The charts in the app are measured, never estimated.",
+   207→  },
+   208→  {
+   209→    term: "expiry",
+   210→    def: "Sessions live 1 hour to 7 days (24 hours by default). Expired sessions are deleted; the file bytes were never stored in the first place.",
+   211→  },
+   212→] as const
+   213→
+   214→const HERO_META = [
+   215→  { icon: BadgeCheck, label: "3 min read" },
+   216→  { icon: ShieldCheck, label: "DTLS end-to-end" },
+   217→  { icon: EyeOff, label: "No storage" },
+   218→] as const
+   219→
+   220→export default function HowItWorksPage() {
+   221→  const jsonLd = {
+   222→    "@context": "https://schema.org",
+   223→    "@graph": [
+   224→      {
+   225→        "@type": "BreadcrumbList",
+   226→        "@id": `${PAGE_URL}#breadcrumb`,
+   227→        itemListElement: [
+   228→          {
+   229→            "@type": "ListItem",
+   230→            position: 1,
+   231→            name: "Home",
+   232→            item: `${SITE_URL}/`,
+   233→          },
+   234→          {
+   235→            "@type": "ListItem",
+   236→            position: 2,
+   237→            name: "How it works",
+   238→            item: PAGE_URL,
+   239→          },
+   240→        ],
+   241→      },
+   242→      {
+   243→        "@type": "FAQPage",
+   244→        "@id": `${PAGE_URL}#faq`,
+   245→        mainEntity: FAQ_ITEMS.map((item) => ({
+   246→          "@type": "Question",
+   247→          name: item.q,
+   248→          acceptedAnswer: {
+   249→            "@type": "Answer",
+   250→            text: item.a,
+   251→          },
+   252→        })),
+   253→      },
+   254→    ],
+   255→  }
+   256→
+   257→  return (
+   258→    <div className="min-h-screen flex flex-col bg-background">
+   259→      <JsonLd data={jsonLd} />
+   260→      <LandingNav active="how-it-works" />
+   261→
+   262→      <main className="flex-1">
+   263→        {/* Hero */}
+   264→        <section className="relative isolate overflow-hidden">
+   265→          <div
+   266→            aria-hidden="true"
+   267→            className="pointer-events-none absolute inset-0 -z-10"
+   268→          >
+   269→            <div className="absolute inset-0 bg-[radial-gradient(ellipse_70%_55%_at_50%_-10%,rgba(244,63,94,0.13),transparent_70%)] dark:bg-[radial-gradient(ellipse_70%_55%_at_50%_-10%,rgba(244,63,94,0.10),transparent_70%)]" />
+   270→            <div className="absolute inset-0 [background-image:radial-gradient(rgba(15,23,42,0.10)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_70%_60%_at_50%_35%,black_25%,transparent_75%)] dark:[background-image:radial-gradient(rgba(255,255,255,0.07)_1px,transparent_1px)]" />
+   271→          </div>
+   272→
+   273→          <div className="mx-auto flex w-full max-w-3xl flex-col items-center px-4 pb-14 pt-16 text-center sm:px-6 md:pb-20 md:pt-24 lg:px-8">
+   274→            <Reveal>
+   275→              <span className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-1.5 text-sm font-medium text-rose-700 shadow-sm shadow-rose-600/10 ring-1 ring-rose-600/5 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:shadow-none dark:ring-rose-400/10">
+   276→                <BookOpenText aria-hidden="true" className="size-4" />
+   277→                The complete technical story
+   278→              </span>
+   279→            </Reveal>
+   280→
+   281→            <Reveal delay={0.08}>
+   282→              <h1 className="mt-6 text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl">
+   283→                How files travel{" "}
+   284→                <span className="text-rose-600 dark:text-rose-500">
+   285→                  browser to browser
+   286→                </span>
+   287→              </h1>
+   288→            </Reveal>
+   289→
+   290→            <Reveal delay={0.16}>
+   291→              <p className="mt-6 max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg">
+   292→                No installs, no cloud hop, no storage bucket. This is the
+   293→                complete journey of a file — the handshake, the encrypted
+   294→                stream, and what our servers do (and never do).
+   295→              </p>
+   296→            </Reveal>
+   297→
+   298→            <Reveal delay={0.24}>
+   299→              <div className="mt-10 flex w-full flex-col items-center justify-center gap-4 sm:w-auto sm:flex-row">
+   300→                <Button
+   301→                  size="lg"
+   302→                  className="h-12 w-full rounded-xl bg-rose-600 px-7 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600 sm:w-auto"
+   303→                  asChild
+   304→                >
+   305→                  <a href="/#transfer">
+   306→                    <Send aria-hidden="true" />
+   307→                    Send files now
+   308→                  </a>
+   309→                </Button>
+   310→                <Button
+   311→                  size="lg"
+   312→                  variant="outline"
+   313→                  className="h-12 w-full rounded-xl px-7 text-base sm:w-auto"
+   314→                  asChild
+   315→                >
+   316→                  <a href="/send-large-files">
+   317→                    Large-file guide
+   318→                    <ArrowRight aria-hidden="true" />
+   319→                  </a>
+   320→                </Button>
+   321→              </div>
+   322→            </Reveal>
+   323→
+   324→            <Reveal delay={0.32}>
+   325→              <ul
+   326→                aria-label="At a glance"
+   327→                className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5"
+   328→              >
+   329→                {HERO_META.map(({ icon: Icon, label }) => (
+   330→                  <li
+   331→                    key={label}
+   332→                    className="inline-flex items-center gap-2 text-sm text-muted-foreground"
+   333→                  >
+   334→                    <Icon
+   335→                      aria-hidden="true"
+   336→                      className="size-4 text-rose-600 dark:text-rose-500"
+   337→                    />
+   338→                    {label}
+   339→                  </li>
+   340→                ))}
+   341→              </ul>
+   342→            </Reveal>
+   343→          </div>
+   344→        </section>
+   345→
+   346→        {/* The journey of a file — timeline */}
+   347→        <section
+   348→          aria-labelledby="journey-heading"
+   349→          className="scroll-mt-24 py-16 md:py-24"
+   350→        >
+   351→          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+   352→            <Reveal className="mx-auto max-w-2xl text-center">
+   353→              <h2
+   354→                id="journey-heading"
+   355→                className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
+   356→              >
+   357→                The journey of a file
+   358→              </h2>
+   359→              <p className="mt-4 text-pretty text-base text-muted-foreground sm:text-lg">
+   360→                Three phases, from matchmaking to clean teardown.
+   361→              </p>
+   362→            </Reveal>
+   363→
+   364→            <ol className="relative ml-3 mt-14 space-y-14 border-l-2 border-border">
+   365→              {PHASES.map((phase) => (
+   366→                <li key={phase.title} className="relative pl-8">
+   367→                  <span
+   368→                    aria-hidden="true"
+   369→                    className="absolute -left-[17px] top-0 flex size-8 items-center justify-center rounded-full border-2 border-border bg-card font-mono text-xs font-semibold text-rose-600 dark:text-rose-500"
+   370→                  >
+   371→                    {phase.n}
+   372→                  </span>
+   373→                  <Reveal>
+   374→                    <div className="flex flex-wrap items-center gap-3">
+   375→                      <div className="flex size-10 items-center justify-center rounded-xl bg-rose-600/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400">
+   376→                        <phase.icon aria-hidden="true" className="size-5" />
+   377→                      </div>
+   378→                      <h3 className="text-xl font-semibold tracking-tight">
+   379→                        {phase.title}
+   380→                      </h3>
+   381→                      <span className="rounded-full border bg-muted/50 px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
+   382→                        {phase.duration}
+   383→                      </span>
+   384→                    </div>
+   385→                    <p className="mt-3 max-w-2xl text-pretty text-sm text-muted-foreground sm:text-base">
+   386→                      {phase.intro}
+   387→                    </p>
+   388→                    <div className="mt-5 grid gap-4 sm:grid-cols-2">
+   389→                      {phase.steps.map((step, stepIndex) => (
+   390→                        <div
+   391→                          key={step.title}
+   392→                          className={
+   393→                            phase.steps.length % 2 === 1 &&
+   394→                            stepIndex === phase.steps.length - 1
+   395→                              ? "rounded-2xl border bg-card p-5 shadow-sm sm:col-span-2"
+   396→                              : "rounded-2xl border bg-card p-5 shadow-sm"
+   397→                          }
+   398→                        >
+   399→                          <p className="text-sm font-semibold">
+   400→                            {step.title}
+   401→                          </p>
+   402→                          <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
+   403→                            {step.text}
+   404→                          </p>
+   405→                        </div>
+   406→                      ))}
+   407→                    </div>
+   408→                  </Reveal>
+   409→                </li>
+   410→              ))}
+   411→            </ol>
+   412→          </div>
+   413→        </section>
+   414→
+   415→        {/* What our servers actually see */}
+   416→        <section
+   417→          aria-labelledby="servers-heading"
+   418→          className="scroll-mt-24 py-16 md:py-24"
+   419→        >
+   420→          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+   421→            <Reveal className="mx-auto max-w-2xl text-center">
+   422→              <h2
+   423→                id="servers-heading"
+   424→                className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
+   425→              >
+   426→                What our servers actually see
+   427→              </h2>
+   428→              <p className="mt-4 text-pretty text-base text-muted-foreground sm:text-lg">
+   429→                A coordination server has to see something to coordinate.
+   430→                Here is the whole inventory — and the rest of the story.
+   431→              </p>
+   432→            </Reveal>
+   433→
+   434→            <div className="mt-12 grid gap-6 md:grid-cols-2">
+   435→              <Reveal delay={0.05} className="h-full">
+   436→                <Card className="h-full rounded-2xl">
+   437→                  <CardHeader>
+   438→                    <CardTitle className="text-base">Coordinates</CardTitle>
+   439→                    <CardDescription>
+   440→                      Ephemeral, functional, deleted with the session.
+   441→                    </CardDescription>
+   442→                  </CardHeader>
+   443→                  <CardContent>
+   444→                    <ul className="space-y-3.5">
+   445→                      {SERVER_SEES.map((item) => (
+   446→                        <li key={item} className="flex gap-3">
+   447→                          <Check
+   448→                            aria-hidden="true"
+   449→                            className="mt-0.5 size-4 shrink-0 text-muted-foreground"
+   450→                          />
+   451→                          <span className="text-sm leading-relaxed text-muted-foreground">
+   452→                            {item}
+   453→                          </span>
+   454→                        </li>
+   455→                      ))}
+   456→                    </ul>
+   457→                  </CardContent>
+   458→                </Card>
+   459→              </Reveal>
+   460→
+   461→              <Reveal delay={0.12} className="h-full">
+   462→                <Card className="h-full rounded-2xl border-rose-200 shadow-lg shadow-rose-600/5 dark:border-rose-500/30 dark:shadow-rose-500/5">
+   463→                  <CardHeader>
+   464→                    <CardTitle className="text-base">
+   465→                      Never touches
+   466→                    </CardTitle>
+   467→                    <CardDescription>
+   468→                      The parts that stay between you and your recipient.
+   469→                    </CardDescription>
+   470→                  </CardHeader>
+   471→                  <CardContent>
+   472→                    <ul className="space-y-3.5">
+   473→                      {SERVER_NEVER.map((item) => (
+   474→                        <li key={item} className="flex gap-3">
+   475→                          <X
+   476→                            aria-hidden="true"
+   477→                            className="mt-0.5 size-4 shrink-0 text-rose-600 dark:text-rose-500"
+   478→                          />
+   479→                          <span className="text-sm leading-relaxed text-muted-foreground">
+   480→                            {item}
+   481→                          </span>
+   482→                        </li>
+   483→                      ))}
+   484→                    </ul>
+   485→                  </CardContent>
+   486→                </Card>
+   487→              </Reveal>
+   488→            </div>
+   489→          </div>
+   490→        </section>
+   491→
+   492→        {/* Two paths, always labeled */}
+   493→        <section
+   494→          aria-labelledby="paths-heading"
+   495→          className="scroll-mt-24 py-16 md:py-24"
+   496→        >
+   497→          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+   498→            <Reveal className="mx-auto max-w-2xl text-center">
+   499→              <h2
+   500→                id="paths-heading"
+   501→                className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
+   502→              >
+   503→                Two paths, always labeled
+   504→              </h2>
+   505→              <p className="mt-4 text-pretty text-base text-muted-foreground sm:text-lg">
+   506→                Networking is messy. We don’t hide it — we label it.
+   507→              </p>
+   508→            </Reveal>
+   509→
+   510→            <div className="mt-12 grid gap-6 md:grid-cols-2">
+   511→              <Reveal delay={0.05} className="h-full">
+   512→                <Card className="h-full rounded-2xl border-rose-200 shadow-lg shadow-rose-600/5 dark:border-rose-500/30 dark:shadow-rose-500/5">
+   513→                  <CardHeader>
+   514→                    <div className="flex flex-wrap items-center justify-between gap-3">
+   515→                      <div className="flex size-11 items-center justify-center rounded-xl bg-rose-600/10 text-rose-600 dark:bg-rose-500/15 dark:text-rose-400">
+   516→                        <ArrowLeftRight
+   517→                          aria-hidden="true"
+   518→                          className="size-5"
+   519→                        />
+   520→                      </div>
+   521→                      <span className="rounded-full bg-rose-600/10 px-3 py-1 text-xs font-semibold text-rose-700 dark:bg-rose-500/15 dark:text-rose-300">
+   522→                        Direct P2P
+   523→                      </span>
+   524→                    </div>
+   525→                    <CardTitle className="mt-2 text-base">
+   526→                      The default
+   527→                    </CardTitle>
+   528→                    <CardDescription>
+   529→                      Browsers connect straight to each other.
+   530→                    </CardDescription>
+   531→                  </CardHeader>
+   532→                  <CardContent>
+   533→                    <ul className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+   534→                      <li>
+   535→                        The two browsers find a direct route through NAT and
+   536→                        firewalls (STUN/ICE) and connect peer to peer.
+   537→                      </li>
+   538→                      <li>
+   539→                        File bytes travel only between the two devices — no
+   540→                        third party is in the path.
+   541→                      </li>
+   542→                      <li>
+   543→                        The connection badge in the app shows{" "}
+   544→                        <span className="font-medium text-foreground">
+   545→                          Direct P2P
+   546→                        </span>{" "}
+   547→                        the whole time.
+   548→                      </li>
+   549→                    </ul>
+   550→                  </CardContent>
+   551→                </Card>
+   552→              </Reveal>
+   553→
+   554→              <Reveal delay={0.12} className="h-full">
+   555→                <Card className="h-full rounded-2xl">
+   556→                  <CardHeader>
+   557→                    <div className="flex flex-wrap items-center justify-between gap-3">
+   558→                      <div className="flex size-11 items-center justify-center rounded-xl bg-muted text-muted-foreground">
+   559→                        <Route aria-hidden="true" className="size-5" />
+   560→                      </div>
+   561→                      <span className="rounded-full border bg-muted/50 px-3 py-1 text-xs font-semibold text-muted-foreground">
+   562→                        Secure relay
+   563→                      </span>
+   564→                    </div>
+   565→                    <CardTitle className="mt-2 text-base">
+   566→                      The fallback
+   567→                    </CardTitle>
+   568→                    <CardDescription>
+   569→                      For networks that block direct links.
+   570→                    </CardDescription>
+   571→                  </CardHeader>
+   572→                  <CardContent>
+   573→                    <ul className="space-y-3 text-sm leading-relaxed text-muted-foreground">
+   574→                      <li>
+   575→                        Strict corporate firewalls and symmetric NAT sometimes
+   576→                        make a direct connection impossible.
+   577→                      </li>
+   578→                      <li>
+   579→                        Traffic then flows through a TURN relay — but DTLS
+   580→                        encryption stays end-to-end between the browsers, so
+   581→                        the relay forwards bytes it cannot read.
+   582→                      </li>
+   583→                      <li>
+   584→                        The badge honestly switches to{" "}
+   585→                        <span className="font-medium text-foreground">
+   586→                          Secure relay
+   587→                        </span>{" "}
+   588→                        so you always know the path.
+   589→                      </li>
+   590→                    </ul>
+   591→                  </CardContent>
+   592→                </Card>
+   593→              </Reveal>
+   594→            </div>
+   595→
+   596→            <Reveal delay={0.1}>
+   597→              <p className="mt-8 text-center text-sm text-muted-foreground">
+   598→                We label the path on every transfer because you deserve to
+   599→                know — not every service tells you.
+   600→              </p>
+   601→            </Reveal>
+   602→          </div>
+   603→        </section>
+   604→
+   605→        {/* Under the hood */}
+   606→        <section
+   607→          aria-labelledby="hood-heading"
+   608→          className="scroll-mt-24 pb-16 md:pb-24"
+   609→        >
+   610→          <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8">
+   611→            <Reveal className="mx-auto max-w-2xl text-center">
+   612→              <h2
+   613→                id="hood-heading"
+   614→                className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
+   615→              >
+   616→                Under the hood
+   617→              </h2>
+   618→              <p className="mt-4 text-pretty text-base text-muted-foreground sm:text-lg">
+   619→                The nerdy corner — the five mechanisms doing the heavy
+   620→                lifting.
+   621→              </p>
+   622→            </Reveal>
+   623→
+   624→            <Reveal delay={0.1} className="mt-10">
+   625→              <dl className="divide-y rounded-2xl border bg-card shadow-sm">
+   626→                {PROTOCOL_FACTS.map((fact, index) => (
+   627→                  <div
+   628→                    key={fact.term}
+   629→                    className={`grid gap-2 px-6 py-5 sm:grid-cols-[140px_1fr] sm:gap-8 ${
+   630→                      index % 2 === 1 ? "bg-muted/30" : ""
+   631→                    }`}
+   632→                  >
+   633→                    <dt className="font-mono text-sm font-semibold text-rose-600 dark:text-rose-500">
+   634→                      {fact.term}
+   635→                    </dt>
+   636→                    <dd className="text-sm leading-relaxed text-muted-foreground">
+   637→                      {fact.def}
+   638→                    </dd>
+   639→                  </div>
+   640→                ))}
+   641→              </dl>
+   642→            </Reveal>
+   643→          </div>
+   644→        </section>
+   645→
+   646→        {/* FAQ + CTA */}
+   647→        <LandingFaq
+   648→          items={FAQ_ITEMS}
+   649→          heading="How-it-works questions"
+   650→          intro="The questions curious people ask before their first transfer."
+   651→        />
+   652→        <LandingCta
+   653→          title="Now you know how it works. Try it."
+   654→          subtitle="Pick a file, share a code, and watch the telemetry chart draw itself from real stats."
+   655→          ctaLabel="Send files now"
+   656→        />
+   657→      </main>
+   658→
+   659→      <Footer />
+   660→    </div>
+   661→  )
+   662→}
+   663→

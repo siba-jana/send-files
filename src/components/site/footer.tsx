@@ -5,7 +5,7 @@ export function Footer() {
   const year = new Date().getFullYear()
 
   return (
-    <footer className="mt-auto border-t bg-muted/30">
+    <footer className="mt-auto border-t bg-muted/30 print:hidden">
       {/* Decorative hairline gradient on top of the border. */}
       <div aria-hidden="true" className="gradient-rule" />
       <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">

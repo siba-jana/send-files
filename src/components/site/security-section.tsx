@@ -2,6 +2,7 @@
 
 import { MotionConfig, motion } from "framer-motion"
 import {
+  ArrowRight,
   Eye,
   FileCheck2,
   HardDrive,
@@ -127,6 +128,25 @@ export function SecuritySection() {
               Designed for direct peer-to-peer transfer, with encrypted relay
               fallback when direct connectivity isn’t possible.
             </span>
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            whileInView={{ opacity: 1 }}
+            viewport={{ once: true, margin: "-40px" }}
+            transition={{ duration: 0.5, delay: 0.12, ease: "easeOut" }}
+            className="mt-4 text-center text-sm"
+          >
+            <a
+              href="/legal/privacy"
+              className="group inline-flex items-center gap-1.5 rounded-sm font-medium text-foreground underline decoration-rose-600/40 underline-offset-4 outline-none transition-colors hover:decoration-rose-600 focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              Read the legally binding version — our Privacy Policy
+              <ArrowRight
+                aria-hidden="true"
+                className="size-3.5 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-rose-600 dark:group-hover:text-rose-400"
+              />
+            </a>
           </motion.p>
         </div>
       </section>

@@ -64,3 +64,13 @@ model TransferEvent {
   @@index([transferId])
   @@index([createdAt])
 }
+
+// Monotonic aggregate counters preserved across expired-transfer purges
+// (lib/server/cleanup.ts folds purged rows' contributions into these before
+// deleting them, so the public stats never decrease). Accessed via raw SQL —
+// the table is small and this avoids Prisma-client regeneration races with
+// the long-running dev server.
+model StatsCounter {
+  key   String @id
+  value BigInt @default(0)
+}

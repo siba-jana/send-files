@@ -486,6 +486,19 @@ export default function HowItWorksPage() {
                 </Card>
               </Reveal>
             </div>
+
+            <Reveal delay={0.15} className="mt-8 text-center">
+              <a
+                href="/legal/privacy"
+                className="group inline-flex items-center gap-1.5 rounded-sm text-sm font-medium text-foreground underline decoration-rose-600/40 underline-offset-4 outline-none transition-colors hover:decoration-rose-600 focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                Every claim above, in legally binding form — our Privacy Policy
+                <ArrowRight
+                  aria-hidden="true"
+                  className="size-3.5 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-rose-600 dark:group-hover:text-rose-400"
+                />
+              </a>
+            </Reveal>
           </div>
         </section>
 

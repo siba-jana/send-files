@@ -8,7 +8,12 @@ import { Logo } from "@/components/site/logo"
 import { ThemeToggle } from "@/components/site/theme-toggle"
 import { cn } from "@/lib/utils"
 
-export type LandingPageId = "large-files" | "how-it-works"
+export type LandingPageId =
+  | "large-files"
+  | "how-it-works"
+  | "terms"
+  | "privacy"
+  | "dmca"
 
 const NAV_LINKS: readonly {
   href: string
@@ -48,7 +53,7 @@ export function LandingNav({ active }: { active: LandingPageId }) {
     )
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md print:hidden">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-4 sm:px-6 lg:px-8">
         <a
           href="/"
