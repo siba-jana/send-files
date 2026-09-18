@@ -6,7 +6,7 @@ import {
 } from "@/components/ui/accordion"
 import { Reveal } from "@/components/site/reveal"
 
-const FAQS = [
+export const FAQS = [
   {
     q: "Is this really peer-to-peer?",
     a: "Yes. Whenever your network allows it, the two browsers connect directly over WebRTC and files stream straight from device to device — they never touch our servers. The connection badge shows “Direct P2P” so you can always confirm.",

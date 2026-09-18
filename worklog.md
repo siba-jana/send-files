@@ -264,3 +264,30 @@ Stage Summary:
 - All prior flows regression-verified clean (code entry, link flow, memory+disk prompts, SHA-256 verification, stats strip, recent transfers, share row, shortcuts, manifest).
 - Known non-issues: VLM 401 (env limit); CDP download mtime (headless quirk only); signaling.log contains one stale "port in use" line from a dead duplicate (running instance fine).
 - Next-phase ideas: 1) README/DEPLOY notes (coturn TURN env, production Postgres/Redis/nginx per SPEC §infrastructure); 2) WebRTC stats history sparkline (RTT over time in completed card); 3) sender file reordering (drag rows) before create; 4) receiver-side "recent received" history (privacy-safe fields, like sender recent list); 5) optional gzip for text over the wire (protocol v2 — CompressionStream before chunking; ZIP already proves the win); 6) i18n groundwork (extract strings).
+
+---
+Task ID: 10
+Agent: main (Z.ai Code)
+Task: Make it production ready — SEO completeness, error resilience, deploy guide
+
+Work Log:
+- Read worklog + SPEC; baseline verified: tsc CLEAN, lint CLEAN, dev.log clean, Next :3000 healthy (fast ~75-90ms renders), signaling :3003 untouched this round (no transfer-engine changes).
+- SEO gap analysis (from user audit request) → closed every gap:
+  - src/app/sitemap.ts (MetadataRoute.Sitemap — single `/` entry, weekly, priority 1; `/?t=`/`?code=` variants deliberately excluded as ephemeral+noindexed; API routes excluded as non-HTML). Serves /sitemap.xml 200.
+  - src/app/robots.ts REPLACES public/robots.txt (deleted to avoid conflict): `User-Agent: * Allow / Disallow /api/` + `Sitemap: https://ilovedoc.org/sitemap.xml` + Host directive. Verified served output.
+  - Canonical: `alternates.canonical: "/"` in layout metadata → `<link rel="canonical" href="https://ilovedoc.org"/>` confirmed in HTML.
+  - OG image: AI-generated via z-ai SDK (scripts/gen-og.ts, re-runnable) — 1216x640 (32-multiple constraint discovered: API requires 512-2880px dims that are multiples of 32; CLI's preset list lacks OG ratio, so SDK-direct with custom size). Model returns JPEG bytes → kept .jpg extension so Content-Type matches (learning). VLM-VERIFIED: "I Love Doc" text spelled correctly, two browser windows + red heart + flying documents, "excellent social media preview image". Wired into openGraph.images (with width/height/alt) + twitter.images.
+  - JSON-LD: page.tsx now renders one @graph script — WebApplication (UtilityApplication, featureList, free Offer) + WebSite + FAQPage. FAQ entities generated from the SAME exported FAQS array the accordion renders (exported from faq.tsx) → structured data can never drift from visible copy. Home() became async to read searchParams: JSON-LD is SKIPPED on private `/?t=`/`/?code=` views (verified absent there), noindex meta still present (regression-checked).
+- Production resilience:
+  - src/app/error.tsx (route-segment boundary, dependency-light on purpose, rose-themed card, error.digest reference, honest copy about interrupted transfers).
+  - src/app/global-error.tsx (root-layout boundary, self-contained <html>/<body> with INLINE styles — assumes nothing loads).
+  - src/app/not-found.tsx (branded 404 with site chrome + "Go back" button). BUG FOUND & FIXED during verification: initial version was a server component with onClick → RSC serialization error → HTTP 500 instead of 404 ("Event handlers cannot be passed to Client Component props"). Fix: "use client". Re-verified: proper 404 status + content, JSON-LD absent, header/footer render.
+- DEPLOY.md written (worklog item #1 from last round): three-process architecture table, env vars (CODE_PEPPER rotation warning, TURN_*), build & run (standalone output), Caddy + nginx reverse-proxy configs with socket.io WS upgrade path, sandbox-only XTransformPort note, coturn config with time-limited HMAC creds guidance, SQLite→Postgres migration decision guide, operational notes (NTP/expiry, backups, CSP tightening for prod — drop 'unsafe-eval').
+- Verification: tsc CLEAN, lint CLEAN, curl checks all pass (robots.txt/sitemap.xml/canonical/og:image+width+height+alt/twitter:image/JSON-LD types all PRESENT; og-image.jpg serves 200 image/jpeg 35KB; /?t= view: noindex present + JSON-LD absent; 404: correct status+content). agent-browser via gateway :81: console clean (only dev HMR), a11y snapshot full (h1/nav/regions), Receive tab click works (hydration fine after Home() async change), VLM screenshot QA: "no defects, polished". dev.log clean.
+
+Stage Summary:
+- Production-readiness gaps from the SEO audit are ALL closed: sitemap, robots (with Sitemap directive), canonical, OG/Twitter image (VLM-verified), JSON-LD (FAQPage+WebApplication+WebSite, drift-proof, privacy-aware).
+- New resilience files: error.tsx, global-error.tsx, not-found.tsx (404 verified). DEPLOY.md + scripts/gen-og.ts added.
+- KEY LEARNINGS: (1) z-ai image API needs 32-multiple dimensions 512-2880 — use SDK directly for non-preset ratios like 1216x640 OG; (2) returned bytes are JPEG regardless of requested format — match file extension or Content-Type lies; (3) not-found/error convention files with interactivity need "use client" (server component onClick → 500 not 404); (4) VLM works again (previous rounds' 401 was transient).
+- No changes to transfer engine/API/signaling this round — all prior E2E guarantees stand.
+- Next-phase ideas: 1) SEO landing content expansion is BLOCKED by sandbox single-route rule (only / is user-visible; sitemap correctly lists just /); if that rule ever lifts, add /file-transfer, /security, /how-it-works, /faq pages per SPEC; 2) RTT sparkline in completed card; 3) sender file reordering; 4) receiver recent-received history; 5) protocol v2 wire compression; 6) favicon.ico legacy fallback (only SVG icon today — major crawlers fine, but some old tools expect /favicon.ico); 7) production CSP hardening when leaving dev mode.

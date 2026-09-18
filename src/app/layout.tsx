@@ -14,6 +14,9 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://ilovedoc.org"),
+  alternates: {
+    canonical: "/",
+  },
   title: {
     default: "ilovedoc.org — Send Files Directly From Browser to Browser",
     template: "%s · ilovedoc.org",
@@ -43,12 +46,21 @@ export const metadata: Metadata = {
     siteName: "I Love Doc",
     type: "website",
     locale: "en_US",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1216,
+        height: 640,
+        alt: "I Love Doc — files flying between two browsers over a direct encrypted connection",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "ilovedoc.org — Send Files Directly From Browser to Browser",
     description:
       "Fast peer-to-peer file sharing with encrypted WebRTC connections and automatic relay fallback when needed.",
+    images: ["/og-image.jpg"],
   },
   robots: {
     index: true,
