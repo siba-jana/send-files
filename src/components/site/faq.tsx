@@ -4,6 +4,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from "@/components/ui/accordion"
+import { Reveal } from "@/components/site/reveal"
 
 const FAQS = [
   {
@@ -56,7 +57,7 @@ export function Faq() {
       className="scroll-mt-24 py-20 md:py-28"
     >
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
+        <Reveal className="text-center">
           <h2
             id="faq-heading"
             className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
@@ -67,22 +68,24 @@ export function Faq() {
             Everything else you might want to know about sending files browser
             to browser.
           </p>
-        </div>
+        </Reveal>
 
-        <div className="mt-10 rounded-2xl border bg-card px-6 py-2 shadow-sm">
-          <Accordion type="single" collapsible className="w-full">
-            {FAQS.map((item, index) => (
-              <AccordionItem key={item.q} value={`faq-${index}`}>
-                <AccordionTrigger className="py-5 text-left text-base font-medium">
-                  {item.q}
-                </AccordionTrigger>
-                <AccordionContent className="pb-5 text-base leading-relaxed text-muted-foreground">
-                  {item.a}
-                </AccordionContent>
-              </AccordionItem>
-            ))}
-          </Accordion>
-        </div>
+        <Reveal delay={0.12} className="mt-10">
+          <div className="rounded-2xl border bg-card px-6 py-2 shadow-sm">
+            <Accordion type="single" collapsible className="w-full">
+              {FAQS.map((item, index) => (
+                <AccordionItem key={item.q} value={`faq-${index}`}>
+                  <AccordionTrigger className="py-5 text-left text-base font-medium">
+                    {item.q}
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 text-base leading-relaxed text-muted-foreground">
+                    {item.a}
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          </div>
+        </Reveal>
       </div>
     </section>
   )

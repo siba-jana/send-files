@@ -48,6 +48,7 @@ import {
 import { formatBytes } from "@/lib/transfer/stats";
 import { ConnectionSteps, ProgressPanel } from "./progress-panel";
 import { FileIcon } from "./file-icon";
+import { scrollToTransfer } from "./scroll-utils";
 
 /** Imperative API the TransferWidget uses for share-link / ?code= entry. */
 export interface ReceiveControllerApi {
@@ -569,7 +570,10 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             <Button
               type="button"
               className="h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
-              onClick={reset}
+              onClick={() => {
+                reset();
+                scrollToTransfer();
+              }}
             >
               <RotateCcw aria-hidden="true" />
               Receive More Files
@@ -595,7 +599,10 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             type="button"
             variant="outline"
             className="mt-7 h-11 w-full rounded-xl sm:w-auto sm:px-8"
-            onClick={reset}
+            onClick={() => {
+              reset();
+              scrollToTransfer();
+            }}
           >
             <RotateCcw aria-hidden="true" />
             Enter Another Code

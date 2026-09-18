@@ -119,4 +119,85 @@
   body {
     @apply bg-background text-foreground;
   }
+  ::selection {
+    @apply bg-rose-600/20 text-foreground;
+  }
+  .dark ::selection {
+    @apply bg-rose-500/30;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* Transfer progress shimmer — a soft diagonal highlight that slides   */
+/* across the active progress bar indicator. Applied via the           */
+/* `shimmer-bar` class on the Progress root. Disabled under            */
+/* reduced motion.                                                     */
+
+@keyframes ilovedoc-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(250%);
+  }
+}
+
+.shimmer-bar [data-slot="progress-indicator"] {
+  position: relative;
+  overflow: hidden;
+}
+
+.shimmer-bar [data-slot="progress-indicator"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  width: 40%;
+  background: linear-gradient(
+    100deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.45) 50%,
+    transparent 100%
+  );
+  animation: ilovedoc-shimmer 1.6s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shimmer-bar [data-slot="progress-indicator"]::after {
+    animation: none;
+  }
+}
+
+/* Soft pulsing glow used behind the waiting-card transfer code. */
+@keyframes ilovedoc-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.9;
+    transform: scale(1.04);
+  }
+}
+
+.code-glow {
+  animation: ilovedoc-glow 5s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .code-glow {
+    animation: none;
+  }
+}
+
+/* Hairline gradient rule used as a decorative section divider. */
+.gradient-rule {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(244, 63, 94, 0.45),
+    transparent
+  );
+  height: 1px;
 }

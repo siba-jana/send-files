@@ -12,6 +12,8 @@ export function Footer() {
 
   return (
     <footer className="mt-auto border-t bg-muted/30">
+      {/* Decorative hairline gradient on top of the border. */}
+      <div aria-hidden="true" className="gradient-rule" />
       <div className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-8 md:flex-row md:items-center md:justify-between">
           <div className="flex flex-col items-start gap-3">

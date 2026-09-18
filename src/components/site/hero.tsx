@@ -82,7 +82,7 @@ export function Hero() {
         >
           <motion.span
             variants={itemVariants}
-            className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-1.5 text-sm font-medium text-rose-700 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300"
+            className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-1.5 text-sm font-medium text-rose-700 shadow-sm shadow-rose-600/10 ring-1 ring-rose-600/5 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:shadow-none dark:ring-rose-400/10"
           >
             <Sparkles aria-hidden="true" className="size-4" />
             No permanent cloud storage

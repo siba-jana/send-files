@@ -62,6 +62,10 @@ export interface SenderState {
   transferredBytes: number;
   speedBps: number | null;
   etaSeconds: number | null;
+  /** Round-trip time of the selected candidate pair, refreshed by the stats probe. */
+  rttMs: number | null;
+  /** Negotiated DataChannel chunk size in bytes (protocol v1). */
+  chunkSize: number | null;
 }
 
 interface FileEntry {
@@ -115,6 +119,7 @@ export class TransferSender {
   private readonly totalBytes: number;
   private speed = new SpeedTracker(6000);
   private connectionKind: ConnectionKind = 'unknown';
+  private rttMs: number | null = null;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private lastPong = Date.now();
   private lastEmit = 0;
@@ -770,11 +775,19 @@ export class TransferSender {
         (local as { candidateType?: string } | undefined)?.candidateType === 'relay' ||
         (remote as { candidateType?: string } | undefined)?.candidateType === 'relay';
       const kind: ConnectionKind = relay ? 'relay' : 'direct';
-      if (kind !== this.connectionKind) {
-        this.connectionKind = kind;
+      // Candidate-pair reports expose currentRoundTripTime in seconds.
+      const crtt = pair.currentRoundTripTime;
+      const rtt = typeof crtt === 'number' && Number.isFinite(crtt) && crtt >= 0
+        ? Math.round(crtt * 1000)
+        : null;
+      const kindChanged = kind !== this.connectionKind;
+      const rttChanged = rtt !== null && (this.rttMs === null || Math.abs(rtt - this.rttMs) >= 5);
+      this.connectionKind = kind;
+      this.rttMs = rtt ?? this.rttMs;
+      if (kindChanged) {
         this.signaling?.sendState(this.opts.token, kind === 'relay' ? 'connected-relay' : 'connected-direct');
-        this.emit(true);
       }
+      if (kindChanged || rttChanged) this.emit(true);
     } catch {
       /* stats unavailable — keep unknown */
     }
@@ -805,6 +818,8 @@ export class TransferSender {
       transferredBytes: transferred,
       speedBps,
       etaSeconds: this.phase === 'transferring' ? etaFromSpeed(speedBps, this.totalBytes - transferred) : null,
+      rttMs: this.rttMs,
+      chunkSize: this.dc ? this.chunkSize : null,
     };
   }
 

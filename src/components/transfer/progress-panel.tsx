@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Check, Gauge, LoaderCircle, Timer } from "lucide-react";
+import { Check, Gauge, LoaderCircle, Radio, Timer } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import {
   formatBytes,
@@ -22,12 +23,61 @@ export interface ProgressPanelProps {
   className?: string;
 }
 
+/** Protocol version of the DataChannel framing (see lib/transfer/protocol.ts). */
+const PROTOCOL_VERSION = 1;
+
 const INDICATOR_ROSE =
   "[&_[data-slot=progress-indicator]]:bg-rose-600 dark:[&_[data-slot=progress-indicator]]:bg-rose-500";
 const INDICATOR_EMERALD =
   "[&_[data-slot=progress-indicator]]:bg-emerald-600 dark:[&_[data-slot=progress-indicator]]:bg-emerald-500";
 const INDICATOR_DESTRUCTIVE =
   "[&_[data-slot=progress-indicator]]:bg-destructive";
+
+/** Live connection stats sourced from WebRTC getStats() — real values only. */
+function ConnectionStatsRow({
+  rttMs,
+  chunkSize,
+}: {
+  rttMs: number | null;
+  chunkSize: number | null;
+}) {
+  if (rttMs === null && chunkSize === null) return null;
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+      {rttMs !== null && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex cursor-default items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
+              <Radio aria-hidden="true" className="size-3" />
+              {rttMs} ms RTT
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>Round-trip time of the live connection, measured by WebRTC.</TooltipContent>
+        </Tooltip>
+      )}
+      {chunkSize !== null && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="inline-flex cursor-default items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
+              {formatBytes(chunkSize, 0)} chunks
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            File data streams in {formatBytes(chunkSize, 0)} chunks over the data channel.
+          </TooltipContent>
+        </Tooltip>
+      )}
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex cursor-default items-center gap-1 rounded-full border bg-muted/40 px-2 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
+            Protocol v{PROTOCOL_VERSION}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent>Chunked binary framing with CRC-32 per chunk + SHA-256 per file.</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+}
 
 function percent(done: number, total: number): number {
   if (total <= 0) return 100;
@@ -82,6 +132,7 @@ export function ProgressPanel({ progress, variant, className }: ProgressPanelPro
             className={cn(
               "mt-2 h-3 bg-rose-100 dark:bg-rose-500/20",
               INDICATOR_ROSE,
+              pct < 100 && "shimmer-bar",
             )}
           />
           <div className="mt-2.5 flex flex-wrap items-center gap-x-5 gap-y-1 text-sm text-muted-foreground">
@@ -104,6 +155,11 @@ export function ProgressPanel({ progress, variant, className }: ProgressPanelPro
               {progress.files.length} file{progress.files.length === 1 ? "" : "s"}
             </span>
           </div>
+
+          <ConnectionStatsRow
+            rttMs={progress.rttMs}
+            chunkSize={progress.chunkSize}
+          />
         </div>
 
         {/* per-file list */}

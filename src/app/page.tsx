@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { SiteHeader } from "@/components/site/header";
 import { Hero } from "@/components/site/hero";
 import { TransferWidget } from "@/components/transfer/transfer-widget";
+import { StatsStrip } from "@/components/site/stats-strip";
 import { HowItWorks } from "@/components/site/how-it-works";
 import { SecuritySection } from "@/components/site/security-section";
 import { Faq } from "@/components/site/faq";
@@ -38,6 +39,7 @@ export default function Home() {
       <main className="flex-1">
         <Hero />
         <TransferWidget />
+        <StatsStrip />
         <HowItWorks />
         <SecuritySection />
         <Faq />

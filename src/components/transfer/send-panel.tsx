@@ -18,14 +18,19 @@ import {
   CloudUpload,
   Copy,
   FolderUp,
+  History,
   Hourglass,
   Link2,
   LoaderCircle,
   Lock,
+  Mail,
+  MessageCircle,
   MonitorSmartphone,
   QrCode,
   RotateCcw,
+  Send,
   Settings2,
+  Share2,
   ShieldCheck,
   TriangleAlert,
   Upload,
@@ -58,10 +63,33 @@ import { Switch } from "@/components/ui/switch";
 import { cn } from "@/lib/utils";
 import { useSendTransfer } from "@/hooks/use-send";
 import { formatBytes } from "@/lib/transfer/stats";
+import {
+  addRecentTransfer,
+  clearRecentTransfers,
+  formatRelativeTime,
+  useRecentTransfers,
+  type RecentTransferStatus,
+} from "@/lib/transfer/recent";
 import { ConnectionSteps, ProgressPanel } from "./progress-panel";
 import { FileIcon } from "./file-icon";
+import { scrollToTransfer } from "./scroll-utils";
 
 const QrDialog = dynamic(() => import("./qr-dialog"), { ssr: false });
+
+/** Small colored status dot for recent-transfer rows. */
+function RecentStatusIcon({ status }: { status: RecentTransferStatus }) {
+  const className = "size-2 shrink-0 rounded-full";
+  switch (status) {
+    case "completed":
+      return <span aria-hidden="true" className={cn(className, "bg-emerald-500")} />;
+    case "failed":
+      return <span aria-hidden="true" className={cn(className, "bg-destructive")} />;
+    case "expired":
+      return <span aria-hidden="true" className={cn(className, "bg-amber-500")} />;
+    default:
+      return <span aria-hidden="true" className={cn(className, "bg-muted-foreground/50")} />;
+  }
+}
 
 const EXPIRY_OPTIONS = [
   { value: "1", label: "1 hour" },
@@ -123,6 +151,14 @@ function getFolderPickerSnapshot(): boolean {
   return folderPickerCache;
 }
 
+let webShareCache: boolean | null = null;
+function getWebShareSnapshot(): boolean {
+  if (webShareCache === null) {
+    webShareCache = typeof navigator !== "undefined" && "share" in navigator;
+  }
+  return webShareCache;
+}
+
 function formatRemaining(ms: number): string {
   if (ms <= 0) return "Expired";
   const totalSeconds = Math.floor(ms / 1000);
@@ -157,6 +193,70 @@ function useCountdown(expiresAt: string | null | undefined): string | null {
     : null;
 }
 
+/** Image files (≤ 32 MB) get a real thumbnail; everything else the type icon. */
+function FileThumb({ file }: { file: File }) {
+  const imgRef = useRef<HTMLImageElement | null>(null);
+  const isImage =
+    file.type.startsWith("image/") && file.size <= 32 * 1024 * 1024;
+
+  useEffect(() => {
+    if (!isImage) return;
+    const url = URL.createObjectURL(file);
+    if (imgRef.current) imgRef.current.src = url;
+    return () => URL.revokeObjectURL(url);
+  }, [isImage, file]);
+
+  if (!isImage) return <FileIcon name={file.name} mimeType={file.type} />;
+  return (
+    <span
+      aria-hidden="true"
+      className="flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-lg border bg-muted/40"
+    >
+      <img
+        ref={imgRef}
+        alt=""
+        loading="lazy"
+        className="size-full object-cover"
+      />
+    </span>
+  );
+}
+
+interface ShareTarget {
+  key: string;
+  label: string;
+  icon: typeof Mail;
+  href: string;
+}
+
+/** Build messenger/email share links for the waiting card. */
+function buildShareTargets(
+  link: string,
+  summary: string,
+): ShareTarget[] {
+  const text = `${summary} — ${link}`;
+  return [
+    {
+      key: "email",
+      label: "Share via email",
+      icon: Mail,
+      href: `mailto:?subject=${encodeURIComponent("Files for you — I Love Doc")}&body=${encodeURIComponent(text)}`,
+    },
+    {
+      key: "telegram",
+      label: "Share on Telegram",
+      icon: Send,
+      href: `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(summary)}`,
+    },
+    {
+      key: "whatsapp",
+      label: "Share on WhatsApp",
+      icon: MessageCircle,
+      href: `https://wa.me/?text=${encodeURIComponent(text)}`,
+    },
+  ];
+}
+
 export function SendPanel() {
   const {
     supported,
@@ -185,6 +285,11 @@ export function SendPanel() {
     getFolderPickerSnapshot,
     () => false,
   );
+  const webShareSupported = useSyncExternalStore(
+    emptySubscribe,
+    getWebShareSnapshot,
+    () => false,
+  );
   const unsupported = hydrated && !supported;
 
   const [dragOver, setDragOver] = useState(false);
@@ -192,6 +297,30 @@ export function SendPanel() {
   const [optionsOpen, setOptionsOpen] = useState(false);
 
   const countdown = useCountdown(phase === "waiting" ? info?.expiresAt : null);
+
+  // Recent transfer history: record each transfer exactly once when it
+  // reaches a terminal phase (localStorage + store notify — no setState here).
+  const recent = useRecentTransfers();
+  const recordedTokenRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (
+      phase !== "completed" &&
+      phase !== "cancelled" &&
+      phase !== "failed" &&
+      phase !== "expired"
+    ) {
+      return;
+    }
+    if (!info || recordedTokenRef.current === info.token) return;
+    recordedTokenRef.current = info.token;
+    addRecentTransfer({
+      code: info.code,
+      fileCount: files.length,
+      totalBytes,
+      createdAt: Date.now(),
+      status: phase as RecentTransferStatus,
+    });
+  }, [phase, info, files.length, totalBytes]);
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
@@ -256,12 +385,18 @@ export function SendPanel() {
             <p className="mt-7 text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
               Transfer code
             </p>
-            <p
-              className="mt-2 select-text text-5xl font-bold tracking-widest tabular-nums sm:text-6xl"
-              aria-label={`Transfer code ${formatCode(info?.code ?? "")}`}
-            >
-              {formatCode(info?.code ?? "")}
-            </p>
+            <div className="relative mt-2">
+              <span
+                aria-hidden="true"
+                className="code-glow pointer-events-none absolute inset-x-8 top-1/2 -z-10 h-16 -translate-y-1/2 rounded-full bg-rose-400/20 blur-2xl dark:bg-rose-500/25"
+              />
+              <p
+                className="select-text text-5xl font-bold tracking-widest tabular-nums sm:text-6xl"
+                aria-label={`Transfer code ${formatCode(info?.code ?? "")}`}
+              >
+                {formatCode(info?.code ?? "")}
+              </p>
+            </div>
 
             <div className="mt-8 w-full space-y-2 text-left">
               <Label
@@ -324,6 +459,49 @@ export function SendPanel() {
                 Show QR
               </Button>
             </div>
+
+            {/* Share straight to a chat or inbox — opens in a new tab. */}
+            {shareLink && (
+              <div className="mt-3 flex w-full items-center justify-center gap-2">
+                {buildShareTargets(
+                  shareLink,
+                  `${files.length} file${files.length === 1 ? "" : "s"} (${formatBytes(totalBytes)}) waiting for you`,
+                ).map((target) => (
+                  <a
+                    key={target.key}
+                    href={target.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={target.label}
+                    title={target.label}
+                    className="inline-flex size-9 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:border-rose-500/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+                  >
+                    <target.icon aria-hidden="true" className="size-4" />
+                  </a>
+                ))}
+                {webShareSupported ? (
+                  <button
+                    type="button"
+                    aria-label="More sharing options"
+                    title="More sharing options"
+                    onClick={() => {
+                      void navigator
+                        .share({
+                          title: "Files for you — I Love Doc",
+                          text: `${files.length} file${files.length === 1 ? "" : "s"} (${formatBytes(totalBytes)}) waiting for you`,
+                          url: shareLink,
+                        })
+                        .catch(() => {
+                          /* user dismissed the sheet — nothing to do */
+                        });
+                    }}
+                    className="inline-flex size-9 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:border-rose-500/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+                  >
+                    <Share2 aria-hidden="true" className="size-4" />
+                  </button>
+                ) : null}
+              </div>
+            )}
 
             <Button
               type="button"
@@ -419,7 +597,10 @@ export function SendPanel() {
           <Button
             type="button"
             className="mt-7 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600 sm:w-auto sm:px-8"
-            onClick={reset}
+            onClick={() => {
+              reset();
+              scrollToTransfer();
+            }}
           >
             <Upload aria-hidden="true" />
             Send More Files
@@ -446,7 +627,10 @@ export function SendPanel() {
             type="button"
             variant="outline"
             className="mt-7 h-11 w-full rounded-xl sm:w-auto sm:px-8"
-            onClick={reset}
+            onClick={() => {
+              reset();
+              scrollToTransfer();
+            }}
           >
             <Upload aria-hidden="true" />
             Send More Files
@@ -470,7 +654,10 @@ export function SendPanel() {
           <Button
             type="button"
             className="mt-5 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
-            onClick={reset}
+            onClick={() => {
+              reset();
+              scrollToTransfer();
+            }}
           >
             <RotateCcw aria-hidden="true" />
             Try Again
@@ -495,7 +682,10 @@ export function SendPanel() {
           <Button
             type="button"
             className="mt-7 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600 sm:w-auto sm:px-8"
-            onClick={reset}
+            onClick={() => {
+              reset();
+              scrollToTransfer();
+            }}
           >
             <Upload aria-hidden="true" />
             Start New Transfer
@@ -631,7 +821,7 @@ export function SendPanel() {
                   key={key}
                   className="flex items-center gap-3 py-2.5 first:pt-0"
                 >
-                  <FileIcon name={file.name} mimeType={file.type} />
+                  <FileThumb file={file} />
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium" title={file.name}>
                       {file.name}
@@ -865,6 +1055,53 @@ export function SendPanel() {
           Files transfer directly between connected browsers — nothing is
           uploaded until a recipient connects.
         </p>
+
+        {/* Recent transfer history (this browser only, privacy-safe fields) */}
+        {recent.length > 0 && (
+          <div className="mt-5 rounded-xl border bg-muted/20 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                <History aria-hidden="true" className="size-4" />
+                Recent transfers
+                <span className="text-xs font-normal">&nbsp;&bull; this browser only
+                </span>
+              </p>
+              <button
+                type="button"
+                aria-label="Clear recent transfer history"
+                onClick={clearRecentTransfers}
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+              >
+                <X aria-hidden="true" className="size-3.5" />
+              </button>
+            </div>
+            <ul className="mt-2.5 space-y-1">
+              {recent.map((entry) => (
+                <li
+                  key={entry.code}
+                  className="flex items-center justify-between gap-3 rounded-lg px-2 py-1.5 transition-colors hover:bg-muted/60"
+                >
+                  <div className="flex min-w-0 items-center gap-2.5">
+                    <RecentStatusIcon status={entry.status} />
+                    <span
+                      className="font-mono text-sm font-medium tabular-nums"
+                      title={`Transfer code ${entry.code}`}
+                    >
+                      {formatCode(entry.code)}
+                    </span>
+                    <span className="truncate text-xs text-muted-foreground tabular-nums">
+                      {entry.fileCount} file{entry.fileCount === 1 ? "" : "s"} •{" "}
+                      {formatBytes(entry.totalBytes)}
+                    </span>
+                  </div>
+                  <span className="shrink-0 text-xs text-muted-foreground">
+                    {formatRelativeTime(entry.createdAt)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
