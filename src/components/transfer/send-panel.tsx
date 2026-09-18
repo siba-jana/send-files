@@ -73,6 +73,7 @@ import {
 import { ConnectionSteps, ProgressPanel } from "./progress-panel";
 import { FileIcon } from "./file-icon";
 import { scrollToTransfer } from "./scroll-utils";
+import { SessionLog } from "./session-log";
 
 const QrDialog = dynamic(() => import("./qr-dialog"), { ssr: false });
 
@@ -222,6 +223,23 @@ function FileThumb({ file }: { file: File }) {
   );
 }
 
+/** Tiny keyboard-hint chip shown inside buttons (decorative, title carries the info). */
+function KbdHint({ children, onPrimary = false }: { children: React.ReactNode; onPrimary?: boolean }) {
+  return (
+    <kbd
+      aria-hidden="true"
+      className={cn(
+        "ml-1 hidden rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold leading-none sm:inline-block",
+        onPrimary
+          ? "border-white/25 bg-white/15"
+          : "border-border bg-muted text-muted-foreground",
+      )}
+    >
+      {children}
+    </kbd>
+  );
+}
+
 interface ShareTarget {
   key: string;
   label: string;
@@ -324,6 +342,35 @@ export function SendPanel() {
 
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const folderInputRef = useRef<HTMLInputElement | null>(null);
+
+  // Keyboard shortcuts on the waiting card: C = copy code, L = copy link.
+  // Plain keys only — browser/system combos (Ctrl/Cmd/Alt) are left alone,
+  // and typing in a field never triggers a copy.
+  useEffect(() => {
+    if (phase !== "waiting") return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      const target = e.target as HTMLElement | null;
+      if (
+        target &&
+        (target.tagName === "INPUT" ||
+          target.tagName === "TEXTAREA" ||
+          target.isContentEditable)
+      ) {
+        return;
+      }
+      const key = e.key.toLowerCase();
+      if (key === "c" && info) {
+        e.preventDefault();
+        void copyText(info.code, "Code copied (C)");
+      } else if (key === "l" && shareLink) {
+        e.preventDefault();
+        void copyText(shareLink, "Link copied (L)");
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [phase, info, shareLink]);
   const attachFolderInput = useCallback((el: HTMLInputElement | null) => {
     folderInputRef.current = el;
     if (el) {
@@ -435,9 +482,11 @@ export function SendPanel() {
                 onClick={() =>
                   shareLink && void copyText(shareLink, "Link copied")
                 }
+                title="Shortcut: L"
               >
                 <Link2 aria-hidden="true" />
                 Copy Link
+                <KbdHint onPrimary>l</KbdHint>
               </Button>
               <Button
                 type="button"
@@ -446,8 +495,10 @@ export function SendPanel() {
                 onClick={() =>
                   info && void copyText(info.code, "Code copied")
                 }
+                title="Shortcut: C"
               >
                 Copy Code
+                <KbdHint>c</KbdHint>
               </Button>
               <Button
                 type="button"
@@ -474,7 +525,7 @@ export function SendPanel() {
                     rel="noopener noreferrer"
                     aria-label={target.label}
                     title={target.label}
-                    className="inline-flex size-9 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:border-rose-500/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+                    className="inline-flex size-9 items-center justify-center rounded-full border text-muted-foreground transition-all outline-none hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-rose-500/60 dark:hover:border-rose-500/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
                   >
                     <target.icon aria-hidden="true" className="size-4" />
                   </a>
@@ -495,7 +546,7 @@ export function SendPanel() {
                           /* user dismissed the sheet — nothing to do */
                         });
                     }}
-                    className="inline-flex size-9 items-center justify-center rounded-full border text-muted-foreground transition-colors hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 dark:hover:border-rose-500/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
+                    className="inline-flex size-9 items-center justify-center rounded-full border text-muted-foreground transition-all outline-none hover:border-rose-300 hover:bg-rose-50 hover:text-rose-600 focus-visible:ring-2 focus-visible:ring-rose-500/60 dark:hover:border-rose-500/50 dark:hover:bg-rose-500/10 dark:hover:text-rose-400"
                   >
                     <Share2 aria-hidden="true" className="size-4" />
                   </button>
@@ -524,6 +575,17 @@ export function SendPanel() {
               <Clock aria-hidden="true" className="size-3.5" />
               {countdown ? `Expires in ${countdown}` : "Expires soon"}
             </p>
+
+            {/* Sender-only observability: live event timeline for this session. */}
+            {info && (
+              <div className="mt-5 w-full text-left">
+                <SessionLog
+                  token={info.token}
+                  senderToken={info.senderToken}
+                  live
+                />
+              </div>
+            )}
           </CardContent>
         </Card>
       </>
@@ -594,6 +656,17 @@ export function SendPanel() {
             <ShieldCheck aria-hidden="true" className="size-3.5" />
             SHA-256 verified ✓
           </p>
+
+          {/* Post-mortem: what the server recorded for this transfer. */}
+          {info && (
+            <div className="mt-6 w-full text-left">
+              <SessionLog
+                token={info.token}
+                senderToken={info.senderToken}
+                live={false}
+              />
+            </div>
+          )}
           <Button
             type="button"
             className="mt-7 h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600 sm:w-auto sm:px-8"
@@ -1070,7 +1143,7 @@ export function SendPanel() {
                 type="button"
                 aria-label="Clear recent transfer history"
                 onClick={clearRecentTransfers}
-                className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+                className="inline-flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors outline-none hover:bg-destructive/10 hover:text-destructive focus-visible:ring-2 focus-visible:ring-ring"
               >
                 <X aria-hidden="true" className="size-3.5" />
               </button>

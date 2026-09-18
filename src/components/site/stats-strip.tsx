@@ -74,8 +74,10 @@ interface StatItem {
 
 function StatBlock({ icon: Icon, label, display }: { icon: LucideIcon; label: string; display: string }) {
   return (
-    <div className="flex flex-col items-center gap-1.5 px-4 py-5 text-center sm:py-6">
-      <Icon aria-hidden="true" className="size-5 text-rose-600 dark:text-rose-400" />
+    <div className="group flex flex-col items-center gap-1.5 px-4 py-5 text-center transition-colors duration-300 hover:bg-rose-50/60 sm:py-6 dark:hover:bg-rose-500/5">
+      <span className="flex size-10 items-center justify-center rounded-xl bg-rose-600/10 text-rose-600 transition-transform duration-300 group-hover:scale-110 dark:bg-rose-500/15 dark:text-rose-400">
+        <Icon aria-hidden="true" className="size-5" />
+      </span>
       <p className="text-2xl font-semibold tabular-nums sm:text-3xl" aria-live="off">
         {display}
       </p>

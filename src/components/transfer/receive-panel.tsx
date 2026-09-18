@@ -15,6 +15,7 @@ import {
   CircleX,
   Clock,
   Download,
+  FileArchive,
   HardDrive,
   Link2,
   LoaderCircle,
@@ -46,6 +47,7 @@ import {
   useReceiveTransfer,
 } from "@/hooks/use-receive";
 import { formatBytes } from "@/lib/transfer/stats";
+import { buildZipBlob, canZip } from "@/lib/transfer/zip";
 import { ConnectionSteps, ProgressPanel } from "./progress-panel";
 import { FileIcon } from "./file-icon";
 import { scrollToTransfer } from "./scroll-utils";
@@ -135,6 +137,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
   const [linkValue, setLinkValue] = useState("");
   const [password, setPassword] = useState("");
   const [saveToDisk, setSaveToDisk] = useState(true);
+  const [zipping, setZipping] = useState(false);
 
   const countdown = useCountdown(
     phase === "confirm" || phase === "unlocking" ? meta?.expiresAt : null,
@@ -464,6 +467,35 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
     const results = progress?.results ?? [];
     const totalBytesReceived = results.reduce((acc, r) => acc + r.size, 0);
     const downloadable = results.filter((r) => r.blob);
+    const zipSupported = downloadable.length > 1 && canZip(downloadable);
+
+    /** Build one ZIP from the in-memory results (stored, no compression). */
+    const downloadAllAsZip = async () => {
+      if (!zipSupported || zipping) return;
+      setZipping(true);
+      try {
+        const blob = await buildZipBlob(
+          downloadable.map((r) => ({
+            name: r.name,
+            blob: r.blob as Blob,
+            expectedSize: r.size,
+          })),
+        );
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = `ilovedoc-files-${(meta?.token ?? "transfer").slice(0, 6)}.zip`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 30_000);
+        toast.success("ZIP archive downloaded");
+      } catch {
+        toast.error("Couldn't build the ZIP — use the per-file downloads.");
+      } finally {
+        setZipping(false);
+      }
+    };
 
     return (
       <Card className="gap-0 rounded-2xl py-0">
@@ -556,20 +588,52 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
           <Separator className="my-5" />
 
           <div className="flex flex-col gap-2.5">
+            {zipSupported ? (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    type="button"
+                    className="h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+                    disabled={zipping}
+                    onClick={() => void downloadAllAsZip()}
+                  >
+                    {zipping ? (
+                      <LoaderCircle aria-hidden="true" className="animate-spin" />
+                    ) : (
+                      <FileArchive aria-hidden="true" />
+                    )}
+                    {zipping ? "Building ZIP…" : `Download All as ZIP (${downloadable.length})`}
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  One archive, built in your browser — names, sizes and SHA-256
+                  hashes are exactly the ones shown above.
+                </TooltipContent>
+              </Tooltip>
+            ) : null}
             {downloadable.length > 0 && (
               <Button
                 type="button"
-                variant="outline"
-                className="h-11 w-full rounded-xl"
+                variant={zipSupported ? "outline" : "default"}
+                className={cn(
+                  "h-11 w-full rounded-xl",
+                  !zipSupported &&
+                    "bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600",
+                )}
                 onClick={() => downloadAll(results)}
               >
                 <Download aria-hidden="true" />
-                Download All{downloadable.length > 1 ? ` (${downloadable.length})` : ""}
+                Download files separately{downloadable.length > 1 ? ` (${downloadable.length})` : ""}
               </Button>
             )}
             <Button
               type="button"
-              className="h-11 w-full rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
+              variant={zipSupported ? "outline" : "default"}
+              className={cn(
+                "h-11 w-full rounded-xl",
+                !zipSupported &&
+                  "bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600",
+              )}
               onClick={() => {
                 reset();
                 scrollToTransfer();
