@@ -280,7 +280,7 @@ function overMessageLimit(socket: ClientSocket): boolean {
 
 // ---------------------------------------------------------------- event handlers
 
-function handleJoin(socket: ClientSocket, raw: unknown, ack: AckFn<JoinAckData> | undefined): void {
+async function handleJoin(socket: ClientSocket, raw: unknown, ack: AckFn<JoinAckData> | undefined): Promise<void> {
   if (overMessageLimit(socket)) return ackFail(ack, 'rate_limited', 'Too many messages; slow down.')
 
   const parsed = joinSchema.safeParse(raw)
@@ -294,17 +294,17 @@ function handleJoin(socket: ClientSocket, raw: unknown, ack: AckFn<JoinAckData> 
 
   let row: TransferRow | null
   try {
-    row = getTransferByToken(token)
+    row = await getTransferByToken(token)
   } catch (err) {
     logError('db', 'failed to load transfer for join', err)
     return ackFail(ack, 'internal', 'Temporary database error.')
   }
   if (!row) return ackFail(ack, 'not_found', 'This transfer is no longer available.')
 
-  if (row.isExpired === 1) {
+  if (row.isExpired) {
     try {
-      markTransferExpired(row.id)
-      logEvent(row.id, 'expired', { source: 'signaling' })
+      await markTransferExpired(row.id)
+      await logEvent(row.id, 'expired', { source: 'signaling' })
     } catch (err) {
       logError('db', 'lazy expiry update failed', err)
     }
@@ -364,8 +364,8 @@ function handleJoin(socket: ClientSocket, raw: unknown, ack: AckFn<JoinAckData> 
 
   if (role === 'receiver') {
     try {
-      activateIfWaiting(token)
-      logEvent(row.id, 'receiver_joined', { role: 'receiver' })
+      await activateIfWaiting(token)
+      await logEvent(row.id, 'receiver_joined', { role: 'receiver' })
     } catch (err) {
       logError('db', 'receiver_joined bookkeeping failed', err)
     }
@@ -374,7 +374,7 @@ function handleJoin(socket: ClientSocket, raw: unknown, ack: AckFn<JoinAckData> 
   log('join', `role=${role} joined transfer (peer ${otherRole ? 'present' : 'absent'}, rooms=${rooms.size})`)
 }
 
-function handleSignal(socket: ClientSocket, raw: unknown, ack: AckFn | undefined): void {
+async function handleSignal(socket: ClientSocket, raw: unknown, ack: AckFn | undefined): Promise<void> {
   if (overMessageLimit(socket)) return ackFail(ack, 'rate_limited', 'Too many messages; slow down.')
 
   const parsed = signalSchema.safeParse(raw)
@@ -414,7 +414,7 @@ function handleSignal(socket: ClientSocket, raw: unknown, ack: AckFn | undefined
   ackOk(ack)
 }
 
-function handleState(socket: ClientSocket, raw: unknown, ack: AckFn | undefined): void {
+async function handleState(socket: ClientSocket, raw: unknown, ack: AckFn | undefined): Promise<void> {
   if (overMessageLimit(socket)) return ackFail(ack, 'rate_limited', 'Too many messages; slow down.')
 
   const parsed = stateSchema.safeParse(raw)
@@ -429,9 +429,9 @@ function handleState(socket: ClientSocket, raw: unknown, ack: AckFn | undefined)
 
   try {
     if (state === 'connected-direct' || state === 'connected-relay') {
-      logEvent(session.transferId, 'connection', { kind: state.slice('connected-'.length) })
+      await logEvent(session.transferId, 'connection', { kind: state.slice('connected-'.length) })
     } else {
-      logEvent(session.transferId, 'state', { state, role: session.role })
+      await logEvent(session.transferId, 'state', { state, role: session.role })
     }
   } catch (err) {
     logError('db', 'state event log failed', err)
@@ -440,7 +440,7 @@ function handleState(socket: ClientSocket, raw: unknown, ack: AckFn | undefined)
   ackOk(ack)
 }
 
-function handleDone(socket: ClientSocket, raw: unknown, ack: AckFn | undefined): void {
+async function handleDone(socket: ClientSocket, raw: unknown, ack: AckFn | undefined): Promise<void> {
   if (overMessageLimit(socket)) return ackFail(ack, 'rate_limited', 'Too many messages; slow down.')
 
   const parsed = doneSchema.safeParse(raw)
@@ -454,10 +454,10 @@ function handleDone(socket: ClientSocket, raw: unknown, ack: AckFn | undefined):
   }
 
   try {
-    incrementDownloads(token)
-    const counts = getDownloadCounts(token)
-    if (counts && counts.downloads >= counts.maxDownloads) completeTransfer(token)
-    logEvent(session.transferId, 'completed', { role: 'receiver' })
+    await incrementDownloads(token)
+    const counts = await getDownloadCounts(token)
+    if (counts && counts.downloads >= counts.maxDownloads) await completeTransfer(token)
+    await logEvent(session.transferId, 'completed', { role: 'receiver' })
   } catch (err) {
     logError('db', 'done bookkeeping failed', err)
     return ackFail(ack, 'internal', 'Temporary database error.')
@@ -470,7 +470,7 @@ function handleDone(socket: ClientSocket, raw: unknown, ack: AckFn | undefined):
   log('transfer', 'receiver confirmed download (transfer done)')
 }
 
-function handleCancel(socket: ClientSocket, raw: unknown, ack: AckFn | undefined): void {
+async function handleCancel(socket: ClientSocket, raw: unknown, ack: AckFn | undefined): Promise<void> {
   if (overMessageLimit(socket)) return ackFail(ack, 'rate_limited', 'Too many messages; slow down.')
 
   const parsed = cancelSchema.safeParse(raw)
@@ -490,14 +490,14 @@ function handleCancel(socket: ClientSocket, raw: unknown, ack: AckFn | undefined
 
   if (session.role === 'sender') {
     try {
-      cancelTransfer(token)
+      await cancelTransfer(token)
     } catch (err) {
       logError('db', 'cancel status update failed', err)
     }
   }
 
   try {
-    logEvent(session.transferId, 'cancelled', { role: session.role })
+    await logEvent(session.transferId, 'cancelled', { role: session.role })
   } catch (err) {
     logError('db', 'cancelled event log failed', err)
   }
@@ -564,9 +564,9 @@ function shutdown(signal: string): void {
   stopCleanupJob()
   io.close()
   internalServer.close()
-  httpServer.close(() => {
+  httpServer.close(async () => {
     try {
-      closeDb()
+      await closeDb()
     } catch {
       /* already closed */
     }

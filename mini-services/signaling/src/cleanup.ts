@@ -14,15 +14,15 @@ export interface CleanupResult {
 }
 
 /** One cleanup pass: expire due transfers, delete 7-day-stale data, GC empty rooms. */
-export function runCleanupOnce(gcEmptyRooms: () => number): CleanupResult {
-  const result = runRetentionCleanup()
+export async function runCleanupOnce(gcEmptyRooms: () => number): Promise<CleanupResult> {
+  const result = await runRetentionCleanup()
   const roomsRemoved = gcEmptyRooms()
   return { ...result, roomsRemoved }
 }
 
-function runOnce(gcEmptyRooms: () => number): void {
+async function runOnce(gcEmptyRooms: () => number): Promise<void> {
   try {
-    const result = runCleanupOnce(gcEmptyRooms)
+    const result = await runCleanupOnce(gcEmptyRooms)
     log(
       'cleanup',
       `marked ${result.expired} expired; deleted ${result.transfers} transfers, ` +

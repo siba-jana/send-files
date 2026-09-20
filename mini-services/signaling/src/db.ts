@@ -1,12 +1,11 @@
 import { randomUUID } from 'node:crypto'
-import { Database } from 'bun:sqlite'
-import { log } from './log'
+import pg from 'pg'
+import { log, logError } from './log'
 
 /**
- * Raw SQLite access to the shared ilovedoc database (same file Prisma uses).
- * Prisma stores DateTime as epoch-ms INTEGER, so expiry comparisons in SQL use
- * `1000 * CAST(strftime('%s','now') AS INTEGER)` (verified in Task 1).
- * Only read queries + tiny UPDATEs / event INSERTs happen here.
+ * PostgreSQL access to the shared ilovedoc database (same DB Prisma uses).
+ * Prisma stores DateTime as timestamptz. Only read queries + tiny UPDATEs /
+ * event INSERTs happen here.
  */
 
 export interface TransferRow {
@@ -14,48 +13,62 @@ export interface TransferRow {
   senderTokenHash: string
   receiverTokenHash: string
   status: string
-  expiresAt: number
+  expiresAt: Date
   maxDownloads: number
   downloads: number
-  /** 1 when expiresAt <= 1000 * CAST(strftime('%s','now') AS INTEGER) */
-  isExpired: number
+  /** true when expiresAt <= NOW() */
+  isExpired: boolean
 }
 
-export const DB_PATH = process.env.DB_PATH || '/home/z/my-project/db/custom.db'
-
-export const sqlite = new Database(DB_PATH)
-sqlite.exec('PRAGMA journal_mode = WAL;')
-sqlite.exec('PRAGMA busy_timeout = 5000;')
-
-const tableCount = sqlite.prepare(
-  "SELECT COUNT(*) AS n FROM sqlite_master WHERE type = 'table' AND name IN ('Transfer', 'TransferFile', 'TransferEvent')"
-).get() as { n: number } | null
-
-if (!tableCount || tableCount.n !== 3) {
-  throw new Error(
-    `signaling: Transfer/TransferFile/TransferEvent tables are missing in ${DB_PATH} — run \`bun run db:push\` in the main project first`
-  )
+const DATABASE_URL = process.env.DATABASE_URL
+if (!DATABASE_URL) {
+  throw new Error('signaling: DATABASE_URL environment variable is required')
 }
 
-log('db', `opened ${DB_PATH} (WAL, busy_timeout=5000)`)
+const pool = new pg.Pool({
+  connectionString: DATABASE_URL,
+  max: 5,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+})
 
-const nowMs = (): number => Date.now()
+// Test connection on startup
+pool.query('SELECT 1').then(() => {
+  log('db', `connected to PostgreSQL (pool max=5)`)
+}).catch((err: unknown) => {
+  logError('db', 'failed to connect to PostgreSQL', err)
+  process.exit(1)
+})
+
+// Verify tables exist
+pool.query(
+  `SELECT COUNT(*) AS n FROM information_schema.tables
+   WHERE table_schema = 'public'
+     AND table_name IN ('Transfer', 'TransferFile', 'TransferEvent')`
+).then((result) => {
+  const n = parseInt(result.rows[0]?.n ?? '0', 10)
+  if (n !== 3) {
+    throw new Error(
+      `signaling: Transfer/TransferFile/TransferEvent tables are missing — run \`npx prisma db push\` in the main project first`
+    )
+  }
+}).catch((err: unknown) => {
+  logError('db', 'table verification failed', err)
+  process.exit(1)
+})
 
 // ---------------------------------------------------------------- reads
 
-const qGetTransfer = sqlite.prepare(
-  `SELECT id, senderTokenHash, receiverTokenHash, status, expiresAt, maxDownloads, downloads,
-          (expiresAt <= 1000 * CAST(strftime('%s','now') AS INTEGER)) AS isExpired
-     FROM Transfer
-    WHERE publicToken = ?`
-)
-
-const qGetDownloadCounts = sqlite.prepare(
-  'SELECT downloads, maxDownloads FROM Transfer WHERE publicToken = ?'
-)
-
-export function getTransferByToken(publicToken: string): TransferRow | null {
-  return (qGetTransfer.get(publicToken) as TransferRow | null) ?? null
+export async function getTransferByToken(publicToken: string): Promise<TransferRow | null> {
+  const result = await pool.query(
+    `SELECT id, "senderTokenHash", "receiverTokenHash", status, "expiresAt",
+            "maxDownloads", downloads,
+            ("expiresAt" <= NOW()) AS "isExpired"
+       FROM "Transfer"
+      WHERE "publicToken" = $1`,
+    [publicToken]
+  )
+  return result.rows[0] ?? null
 }
 
 export interface DownloadCounts {
@@ -63,61 +76,62 @@ export interface DownloadCounts {
   maxDownloads: number
 }
 
-export function getDownloadCounts(publicToken: string): DownloadCounts | null {
-  return (qGetDownloadCounts.get(publicToken) as DownloadCounts | null) ?? null
+export async function getDownloadCounts(publicToken: string): Promise<DownloadCounts | null> {
+  const result = await pool.query(
+    `SELECT downloads, "maxDownloads" FROM "Transfer" WHERE "publicToken" = $1`,
+    [publicToken]
+  )
+  return result.rows[0] ?? null
 }
 
 // ---------------------------------------------------------------- writes
 
-const qMarkExpiredById = sqlite.prepare(
-  `UPDATE Transfer SET status = 'expired', updatedAt = ? WHERE id = ? AND status IN ('waiting','active')`
-)
-
-const qActivateIfWaiting = sqlite.prepare(
-  `UPDATE Transfer SET status = 'active', updatedAt = ? WHERE publicToken = ? AND status = 'waiting'`
-)
-
-const qIncrementDownloads = sqlite.prepare(
-  `UPDATE Transfer SET downloads = downloads + 1, updatedAt = ? WHERE publicToken = ?`
-)
-
-const qCompleteTransfer = sqlite.prepare(
-  `UPDATE Transfer SET status = 'completed', updatedAt = ? WHERE publicToken = ? AND status IN ('waiting','active')`
-)
-
-const qCancelTransfer = sqlite.prepare(
-  `UPDATE Transfer SET status = 'cancelled', updatedAt = ? WHERE publicToken = ? AND status IN ('waiting','active')`
-)
-
-const qInsertEvent = sqlite.prepare(
-  `INSERT INTO TransferEvent (id, transferId, eventType, metadata, createdAt) VALUES (?, ?, ?, ?, ?)`
-)
-
-/** Lazily mark a transfer expired (when a join hits an already-due expiresAt). */
-export function markTransferExpired(id: string): void {
-  qMarkExpiredById.run(nowMs(), id)
+export async function markTransferExpired(id: string): Promise<void> {
+  await pool.query(
+    `UPDATE "Transfer" SET status = 'expired', "updatedAt" = NOW()
+     WHERE id = $1 AND status IN ('waiting','active')`,
+    [id]
+  )
 }
 
-/** waiting → active, fired when a receiver joins. */
-export function activateIfWaiting(publicToken: string): void {
-  qActivateIfWaiting.run(nowMs(), publicToken)
+export async function activateIfWaiting(publicToken: string): Promise<void> {
+  await pool.query(
+    `UPDATE "Transfer" SET status = 'active', "updatedAt" = NOW()
+     WHERE "publicToken" = $1 AND status = 'waiting'`,
+    [publicToken]
+  )
 }
 
-export function incrementDownloads(publicToken: string): void {
-  qIncrementDownloads.run(nowMs(), publicToken)
+export async function incrementDownloads(publicToken: string): Promise<void> {
+  await pool.query(
+    `UPDATE "Transfer" SET downloads = downloads + 1, "updatedAt" = NOW()
+     WHERE "publicToken" = $1`,
+    [publicToken]
+  )
 }
 
-export function completeTransfer(publicToken: string): void {
-  qCompleteTransfer.run(nowMs(), publicToken)
+export async function completeTransfer(publicToken: string): Promise<void> {
+  await pool.query(
+    `UPDATE "Transfer" SET status = 'completed', "updatedAt" = NOW()
+     WHERE "publicToken" = $1 AND status IN ('waiting','active')`,
+    [publicToken]
+  )
 }
 
-export function cancelTransfer(publicToken: string): void {
-  qCancelTransfer.run(nowMs(), publicToken)
+export async function cancelTransfer(publicToken: string): Promise<void> {
+  await pool.query(
+    `UPDATE "Transfer" SET status = 'cancelled', "updatedAt" = NOW()
+     WHERE "publicToken" = $1 AND status IN ('waiting','active')`,
+    [publicToken]
+  )
 }
 
-/** Append an audit event. `metadata` must never contain tokens, passwords or file content. */
-export function logEvent(transferId: string, eventType: string, metadata: Record<string, unknown>): void {
-  qInsertEvent.run(randomUUID(), transferId, eventType, JSON.stringify(metadata), nowMs())
+export async function logEvent(transferId: string, eventType: string, metadata: Record<string, unknown>): Promise<void> {
+  await pool.query(
+    `INSERT INTO "TransferEvent" (id, "transferId", "eventType", metadata, "createdAt")
+     VALUES ($1, $2, $3, $4, NOW())`,
+    [randomUUID(), transferId, eventType, JSON.stringify(metadata)]
+  )
 }
 
 // ---------------------------------------------------------------- retention cleanup
@@ -129,52 +143,58 @@ export interface RetentionResult {
   transfers: number
 }
 
-const qCountDueExpired = sqlite.prepare(
-  `SELECT COUNT(*) AS n FROM Transfer WHERE status IN ('waiting','active') AND expiresAt <= 1000 * CAST(strftime('%s','now') AS INTEGER)`
-)
-const qExpireDue = sqlite.prepare(
-  `UPDATE Transfer SET status='expired' WHERE status IN ('waiting','active') AND expiresAt <= 1000 * CAST(strftime('%s','now') AS INTEGER)`
-)
-const qCountStaleEvents = sqlite.prepare(
-  `SELECT COUNT(*) AS n FROM TransferEvent WHERE transferId IN (SELECT id FROM Transfer WHERE expiresAt <= 1000 * (CAST(strftime('%s','now') AS INTEGER) - 604800))`
-)
-const qDeleteStaleEvents = sqlite.prepare(
-  `DELETE FROM TransferEvent WHERE transferId IN (SELECT id FROM Transfer WHERE expiresAt <= 1000 * (CAST(strftime('%s','now') AS INTEGER) - 604800))`
-)
-const qCountStaleFiles = sqlite.prepare(
-  `SELECT COUNT(*) AS n FROM TransferFile WHERE transferId IN (SELECT id FROM Transfer WHERE expiresAt <= 1000 * (CAST(strftime('%s','now') AS INTEGER) - 604800))`
-)
-const qDeleteStaleFiles = sqlite.prepare(
-  `DELETE FROM TransferFile WHERE transferId IN (SELECT id FROM Transfer WHERE expiresAt <= 1000 * (CAST(strftime('%s','now') AS INTEGER) - 604800))`
-)
-const qCountStaleTransfers = sqlite.prepare(
-  `SELECT COUNT(*) AS n FROM Transfer WHERE expiresAt <= 1000 * (CAST(strftime('%s','now') AS INTEGER) - 604800)`
-)
-const qDeleteStaleTransfers = sqlite.prepare(
-  `DELETE FROM Transfer WHERE expiresAt <= 1000 * (CAST(strftime('%s','now') AS INTEGER) - 604800)`
-)
+export async function runRetentionCleanup(): Promise<RetentionResult> {
+  // Count and mark due expired
+  const expiredCount = await pool.query(
+    `SELECT COUNT(*) AS n FROM "Transfer"
+     WHERE status IN ('waiting','active') AND "expiresAt" <= NOW()`
+  )
+  const expired = parseInt(expiredCount.rows[0]?.n ?? '0', 10)
 
-function countOf(stmt: { get(): unknown }): number {
-  const row = stmt.get() as { n: number } | null
-  return row?.n ?? 0
-}
+  await pool.query(
+    `UPDATE "Transfer" SET status='expired'
+     WHERE status IN ('waiting','active') AND "expiresAt" <= NOW()`
+  )
 
-/**
- * Mark due transfers expired + delete transfers older than 7 days past expiry,
- * deleting their events/files explicitly (raw SQLite has no FK cascade).
- */
-export function runRetentionCleanup(): RetentionResult {
-  const expired = countOf(qCountDueExpired)
-  qExpireDue.run()
-  const events = countOf(qCountStaleEvents)
-  qDeleteStaleEvents.run()
-  const files = countOf(qCountStaleFiles)
-  qDeleteStaleFiles.run()
-  const transfers = countOf(qCountStaleTransfers)
-  qDeleteStaleTransfers.run()
+  // Count and delete stale events (7 days past expiry)
+  const eventsCount = await pool.query(
+    `SELECT COUNT(*) AS n FROM "TransferEvent"
+     WHERE "transferId" IN (SELECT id FROM "Transfer" WHERE "expiresAt" <= NOW() - INTERVAL '7 days')`
+  )
+  const events = parseInt(eventsCount.rows[0]?.n ?? '0', 10)
+
+  await pool.query(
+    `DELETE FROM "TransferEvent"
+     WHERE "transferId" IN (SELECT id FROM "Transfer" WHERE "expiresAt" <= NOW() - INTERVAL '7 days')`
+  )
+
+  // Count and delete stale files
+  const filesCount = await pool.query(
+    `SELECT COUNT(*) AS n FROM "TransferFile"
+     WHERE "transferId" IN (SELECT id FROM "Transfer" WHERE "expiresAt" <= NOW() - INTERVAL '7 days')`
+  )
+  const files = parseInt(filesCount.rows[0]?.n ?? '0', 10)
+
+  await pool.query(
+    `DELETE FROM "TransferFile"
+     WHERE "transferId" IN (SELECT id FROM "Transfer" WHERE "expiresAt" <= NOW() - INTERVAL '7 days')`
+  )
+
+  // Count and delete stale transfers
+  const transfersCount = await pool.query(
+    `SELECT COUNT(*) AS n FROM "Transfer"
+     WHERE "expiresAt" <= NOW() - INTERVAL '7 days'`
+  )
+  const transfers = parseInt(transfersCount.rows[0]?.n ?? '0', 10)
+
+  await pool.query(
+    `DELETE FROM "Transfer"
+     WHERE "expiresAt" <= NOW() - INTERVAL '7 days'`
+  )
+
   return { expired, events, files, transfers }
 }
 
-export function closeDb(): void {
-  sqlite.close()
+export async function closeDb(): Promise<void> {
+  await pool.end()
 }
