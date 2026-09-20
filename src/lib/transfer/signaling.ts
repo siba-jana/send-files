@@ -71,7 +71,15 @@ export class SignalingClient {
   /** Connect (dynamic import) and resolve once the socket is live. */
   static async connect(handlers: SignalingHandlers): Promise<SignalingClient> {
     const { io } = await import('socket.io-client');
-    const socket = io('/?XTransformPort=3003', {
+
+    // In production the signaling service sits behind the same-origin reverse
+    // proxy (nginx routes /socket.io/* → port 3003).  The ?XTransformPort
+    // query is a sandbox-gateway-only concern and must not ship to production.
+    const isDev = process.env.NODE_ENV === 'development' ||
+      (typeof window !== 'undefined' && window.location.hostname === 'localhost');
+    const url = isDev ? '/?XTransformPort=3003' : '/';
+
+    const socket = io(url, {
       transports: ['websocket', 'polling'],
       forceNew: true,
       reconnection: true,
