@@ -27,6 +27,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     }));
 
+  const localizedChatGptToPdfPages: MetadataRoute.Sitemap =
+    SUPPORTED_LOCALES.map((l) => ({
+      url: `${SITE_URL}/${l.code}/chatgpt-to-pdf`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    }));
+
   return [
     {
       url: `${SITE_URL}/`,
@@ -42,6 +50,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     ...localizedFilesTransferOnlinePages,
+    {
+      url: `${SITE_URL}/chatgpt-to-pdf`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    ...localizedChatGptToPdfPages,
     {
       url: `${SITE_URL}/send-large-files`,
       lastModified: new Date(),

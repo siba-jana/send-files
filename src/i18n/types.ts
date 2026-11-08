@@ -25,6 +25,28 @@ export interface FaqItem {
   a: string;
 }
 
+export interface ChatGptToPdfDictionary {
+  title: string;
+  subtitle: string;
+  pasteButton: string;
+  uploadButton: string;
+  sampleButton: string;
+  clearButton: string;
+  downloadPdf: string;
+  generatingPdf: string;
+  printButton: string;
+  settingsButton: string;
+  readyStatus: string;
+  wordsCount: string;
+  emptyHint: string;
+  autoFormatNotice: string;
+  placeholder: string;
+  dropOverlay: string;
+  previewTitle?: string;
+  settingsTitle?: string;
+  settingsDesc?: string;
+}
+
 export interface Dictionary {
   common: {
     sendFiles: string;
@@ -194,5 +216,6 @@ export interface Dictionary {
     historyEmpty: string;
     historyClear: string;
   };
+  chatgptToPdf?: ChatGptToPdfDictionary;
 }
 

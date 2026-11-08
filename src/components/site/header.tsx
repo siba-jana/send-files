@@ -18,9 +18,11 @@ export function SiteHeader() {
 
   const isToolPage = pathname.includes("/files-transfer-online")
   const toolUrl = `/${locale}/files-transfer-online`
+  const chatGptPdfUrl = `/${locale}/chatgpt-to-pdf`
 
   const navLinks = [
     { href: isToolPage ? "#top" : toolUrl, label: t("header.send") },
+    { href: chatGptPdfUrl, label: "ChatGPT to PDF", isHighlight: true },
     { href: "#how-it-works", label: t("header.howItWorks") },
     { href: "#security", label: t("header.security") },
     { href: "#faq", label: t("header.faq") },
@@ -64,7 +66,10 @@ export function SiteHeader() {
             <a
               key={link.label}
               href={link.href}
-              className="rounded-md px-3 py-2 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              className={`rounded-md px-3 py-2 text-sm font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring ${link.isHighlight
+                  ? "text-emerald-600 dark:text-emerald-400 font-semibold hover:text-emerald-700 dark:hover:text-emerald-300"
+                  : "text-muted-foreground hover:text-foreground"
+                }`}
             >
               {link.label}
             </a>

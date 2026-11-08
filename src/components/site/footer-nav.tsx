@@ -15,9 +15,11 @@ export function FooterNav() {
     /^\/[a-z]{2}\/files-transfer-online(\/)?$/.test(pathname)
 
   const toolUrl = `/${locale}/files-transfer-online`
+  const chatGptPdfUrl = `/${locale}/chatgpt-to-pdf`
 
   const mainLinks = [
     { kind: "route", href: toolUrl, label: t("footer.sendAndReceive") },
+    { kind: "route", href: chatGptPdfUrl, label: "ChatGPT to PDF" },
     { kind: "route", href: "/send-large-files", label: t("footer.sendLargeFiles") },
     { kind: "route", href: "/how-it-works", label: t("footer.howItWorks") },
     { kind: "hash", anchor: "security", label: t("footer.security") },
