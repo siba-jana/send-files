@@ -6,6 +6,7 @@ import { Check, Gauge, LoaderCircle, Radio, Route, Timer } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useI18n } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import {
   formatBytes,
@@ -62,7 +63,7 @@ function ConnectionStatsRow({
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            ICE candidates carrying this transfer: {candidateLocalType} on your side, {candidateRemoteType} on the peer side. "srflx" means a NAT-mapped address; "relay" means TURN.
+            ICE candidates carrying this transfer: {candidateLocalType} on your side, {candidateRemoteType} on the peer side.
           </TooltipContent>
         </Tooltip>
       )}
@@ -107,13 +108,12 @@ function percent(done: number, total: number): number {
 }
 
 /**
- * Live transfer progress: overall stats (bytes, %, speed, ETA — all real
- * values from the engine) plus a per-file breakdown. Null speed/ETA are
- * hidden rather than faked.
+ * Live transfer progress: overall stats (bytes, %, speed, ETA).
  */
 export function ProgressPanel({ progress, variant, className }: ProgressPanelProps) {
   const isSending = variant === "sending";
   const pct = percent(progress.transferredBytes, progress.totalBytes);
+  const { t } = useI18n();
 
   return (
     <Card className={cn("gap-0 rounded-2xl py-0", className)}>
@@ -128,7 +128,7 @@ export function ProgressPanel({ progress, variant, className }: ProgressPanelPro
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-60" />
               <span className="relative inline-flex size-2.5 rounded-full bg-rose-600 dark:bg-rose-500" />
             </span>
-            {isSending ? "Sending files…" : "Receiving files…"}
+            {isSending ? t("transfer.transferring") : t("transfer.downloading")}
           </p>
           <ConnectionBadge kind={progress.connectionKind} />
         </div>
@@ -148,8 +148,8 @@ export function ProgressPanel({ progress, variant, className }: ProgressPanelPro
             value={pct}
             aria-label={
               isSending
-                ? `Overall sending progress: ${pct}%`
-                : `Overall receiving progress: ${pct}%`
+                ? `${t("transfer.transferring")}: ${pct}%`
+                : `${t("transfer.downloading")}: ${pct}%`
             }
             className={cn(
               "mt-2 h-3 bg-rose-100 dark:bg-rose-500/20",
@@ -168,13 +168,13 @@ export function ProgressPanel({ progress, variant, className }: ProgressPanelPro
               <span className="inline-flex items-center gap-1.5">
                 <Timer aria-hidden="true" className="size-4" />
                 <span>
-                  Estimated time remaining:{" "}
+                  {t("transfer.timeLeft")}:{" "}
                   <span className="tabular-nums">{formatEta(progress.etaSeconds)}</span>
                 </span>
               </span>
             )}
             <span className="ml-auto tabular-nums">
-              {progress.files.length} file{progress.files.length === 1 ? "" : "s"}
+              {progress.files.length} {t("transfer.selectedFiles").toLowerCase()}
             </span>
           </div>
 
@@ -191,7 +191,7 @@ export function ProgressPanel({ progress, variant, className }: ProgressPanelPro
 
         {/* per-file list */}
         <ul
-          aria-label={isSending ? "Files being sent" : "Files being received"}
+          aria-label={isSending ? t("transfer.selectedFiles") : t("transfer.incomingFiles")}
           className="mt-5 max-h-72 space-y-1 overflow-y-auto pr-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:transparent"
         >
           {progress.files.map((file) => {
@@ -226,7 +226,7 @@ export function ProgressPanel({ progress, variant, className }: ProgressPanelPro
                       ? "complete"
                       : file.status === "error"
                         ? "error"
-                        : `${filePct}% transferred`
+                        : `${filePct}%`
                   }`}
                   className={cn(
                     "mt-2 h-1.5",
@@ -257,11 +257,13 @@ function FileStatusText({
   error?: string;
   variant: "sending" | "receiving";
 }) {
+  const { t } = useI18n();
+
   if (status === "verified") {
     return (
       <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
         <Check aria-hidden="true" className="size-3.5" />
-        Verified
+        {t("transfer.sha256Verified")}
       </span>
     );
   }
@@ -269,7 +271,7 @@ function FileStatusText({
     return (
       <span className="inline-flex shrink-0 items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400">
         <Check aria-hidden="true" className="size-3.5" />
-        {variant === "sending" ? "Sent" : "Received"}
+        {variant === "sending" ? t("transfer.completed") : t("transfer.downloadComplete")}
       </span>
     );
   }
@@ -279,13 +281,15 @@ function FileStatusText({
         className="shrink-0 text-xs font-medium text-destructive"
         title={error ?? "Transfer error"}
       >
-        Error
+        {t("common.error")}
       </span>
     );
   }
   if (status === "pending") {
     return (
-      <span className="shrink-0 text-xs text-muted-foreground">Waiting</span>
+      <span className="shrink-0 text-xs text-muted-foreground">
+        {t("transfer.waitingRecipient")}
+      </span>
     );
   }
   return (
@@ -301,9 +305,7 @@ export interface ConnectionStepsProps {
 }
 
 /**
- * Animated connection checklist for the "connecting" phase. The engine does
- * not expose sub-step timing, so the highlight cycles as a visual heartbeat —
- * purely decorative (aria-hidden); the parent provides sr-only status text.
+ * Animated connection checklist for the "connecting" phase.
  */
 export function ConnectionSteps({ steps, className }: ConnectionStepsProps) {
   const [active, setActive] = useState(0);

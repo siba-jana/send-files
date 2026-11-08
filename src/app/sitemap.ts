@@ -1,19 +1,32 @@
 import type { MetadataRoute } from "next";
+import { SUPPORTED_LOCALES } from "@/i18n/locales";
 
 /**
  * Sitemap for crawlers (docs/SPEC.md §seo).
  *
- * Public, indexable routes: the app itself (`/`), the two dedicated guide
- * pages, and the legal documents. Transfer share links are `/?t=<token>` /
- * `/?code=<digits>` query variants that are (a) noindexed at render time and
- * (b) ephemeral — neither belongs in a sitemap. API routes are omitted
- * (non-HTML).
+ * Public, indexable routes: the app itself, localized pages, dedicated guide
+ * pages, and legal documents.
  */
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
   (process.env.DOMAIN ? `https://${process.env.DOMAIN}` : "https://www.ilovedoc.org");
 
 export default function sitemap(): MetadataRoute.Sitemap {
+  const localizedHomePages: MetadataRoute.Sitemap = SUPPORTED_LOCALES.map((l) => ({
+    url: `${SITE_URL}/${l.code}`,
+    lastModified: new Date(),
+    changeFrequency: "weekly",
+    priority: 1,
+  }));
+
+  const localizedFilesTransferOnlinePages: MetadataRoute.Sitemap =
+    SUPPORTED_LOCALES.map((l) => ({
+      url: `${SITE_URL}/${l.code}/files-transfer-online`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    }));
+
   return [
     {
       url: `${SITE_URL}/`,
@@ -21,6 +34,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "weekly",
       priority: 1,
     },
+    ...localizedHomePages,
+    {
+      url: `${SITE_URL}/files-transfer-online`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    ...localizedFilesTransferOnlinePages,
     {
       url: `${SITE_URL}/send-large-files`,
       lastModified: new Date(),

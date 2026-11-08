@@ -1,38 +1,40 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-
-const MAIN_LINKS = [
-  { kind: "hash", anchor: "transfer", label: "Send & receive" },
-  { kind: "route", href: "/send-large-files", label: "Send large files" },
-  { kind: "route", href: "/how-it-works", label: "How it works" },
-  { kind: "hash", anchor: "security", label: "Security" },
-  { kind: "hash", anchor: "faq", label: "FAQ" },
-] as const
-
-const LEGAL_LINKS = [
-  { href: "/legal/terms", label: "Terms" },
-  { href: "/legal/privacy", label: "Privacy" },
-  { href: "/legal/dmca", label: "DMCA" },
-] as const
+import { useI18n } from "@/i18n/context"
 
 const linkClass =
   "inline-flex min-h-11 items-center rounded-md px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring md:min-h-0"
 
-/**
- * Footer navigation (client island) — hash targets resolve to plain
- * `#anchor` while on `/` (same-document scroll, safe even during an
- * active receive view on `/?code=…`) and to `/#anchor` from every other
- * route so they still land on the app after a full navigation.
- */
 export function FooterNav() {
-  const onHome = usePathname() === "/"
+  const pathname = usePathname()
+  const { locale, t } = useI18n()
+  const onHome =
+    pathname === "/" ||
+    /^\/[a-z]{2}(\/)?$/.test(pathname) ||
+    /^\/[a-z]{2}\/files-transfer-online(\/)?$/.test(pathname)
+
+  const toolUrl = `/${locale}/files-transfer-online`
+
+  const mainLinks = [
+    { kind: "route", href: toolUrl, label: t("footer.sendAndReceive") },
+    { kind: "route", href: "/send-large-files", label: t("footer.sendLargeFiles") },
+    { kind: "route", href: "/how-it-works", label: t("footer.howItWorks") },
+    { kind: "hash", anchor: "security", label: t("footer.security") },
+    { kind: "hash", anchor: "faq", label: t("footer.faq") },
+  ] as const
+
+  const legalLinks = [
+    { href: "/legal/terms", label: t("footer.terms") },
+    { href: "/legal/privacy", label: t("footer.privacy") },
+    { href: "/legal/dmca", label: t("footer.dmca") },
+  ] as const
 
   return (
     <nav aria-label="Footer">
       <div className="flex flex-col gap-x-1 gap-y-1 md:flex-row md:items-center">
         <ul className="flex flex-wrap items-center gap-x-1 gap-y-1">
-          {MAIN_LINKS.map((link) => {
+          {mainLinks.map((link) => {
             const href =
               link.kind === "route"
                 ? link.href
@@ -58,7 +60,7 @@ export function FooterNav() {
           aria-label="Legal"
           className="flex flex-wrap items-center gap-x-1 gap-y-1"
         >
-          {LEGAL_LINKS.map((link) => (
+          {legalLinks.map((link) => (
             <li key={link.label}>
               <a href={link.href} className={linkClass}>
                 {link.label}

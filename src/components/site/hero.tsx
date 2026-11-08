@@ -17,14 +17,14 @@ import {
 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { useI18n } from "@/i18n/context"
 
 const HEART_PATH =
   "M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"
 
 /**
  * Switch the transfer widget mode and scroll it into view.
- * The widget (built separately) listens for the `ilovedoc:mode` event
- * with detail "send" | "receive".
+ * The widget listens for the `ilovedoc:mode` event with detail "send" | "receive".
  */
 function startTransfer(mode: "send" | "receive") {
   window.dispatchEvent(new CustomEvent("ilovedoc:mode", { detail: mode }))
@@ -37,13 +37,6 @@ function startTransfer(mode: "send" | "receive") {
     window.scrollTo({ top: Math.max(0, top), behavior: reduceMotion ? "auto" : "smooth" })
   }
 }
-
-const TRUST_ITEMS = [
-  { icon: ShieldCheck, label: "End-to-end encrypted" },
-  { icon: ArrowLeftRight, label: "Direct P2P" },
-  { icon: Clock, label: "No sign-up" },
-  { icon: BadgeCheck, label: "SHA-256 verified" },
-] as const
 
 const containerVariants: Variants = {
   hidden: {},
@@ -61,6 +54,14 @@ const itemVariants: Variants = {
 
 export function Hero() {
   const reduceMotion = useReducedMotion()
+  const { t } = useI18n()
+
+  const trustItems = [
+    { icon: ShieldCheck, label: t("hero.trustE2e") },
+    { icon: ArrowLeftRight, label: t("hero.trustP2p") },
+    { icon: Clock, label: t("hero.trustNoSignup") },
+    { icon: BadgeCheck, label: t("hero.trustSha256") },
+  ]
 
   return (
     <MotionConfig reducedMotion="user">
@@ -85,26 +86,25 @@ export function Hero() {
             className="inline-flex items-center gap-2 rounded-full border border-rose-200 bg-rose-50 px-4 py-1.5 text-sm font-medium text-rose-700 shadow-sm shadow-rose-600/10 ring-1 ring-rose-600/5 dark:border-rose-500/30 dark:bg-rose-500/10 dark:text-rose-300 dark:shadow-none dark:ring-rose-400/10"
           >
             <Sparkles aria-hidden="true" className="size-4" />
-            No permanent cloud storage
+            {t("hero.badge")}
           </motion.span>
 
           <motion.h1
             variants={itemVariants}
             className="mt-6 text-balance text-4xl font-semibold tracking-tight sm:text-5xl md:text-6xl"
           >
-            Send files directly from{" "}
+            {t("hero.titlePre")}
             <span className="text-rose-600 dark:text-rose-500">
-              browser to browser
+              {t("hero.titleHighlight")}
             </span>
-            .
+            {t("hero.titlePost")}
           </motion.h1>
 
           <motion.p
             variants={itemVariants}
             className="mt-6 max-w-2xl text-pretty text-base text-muted-foreground sm:text-lg"
           >
-            Fast peer-to-peer file sharing with encrypted WebRTC connections
-            and automatic relay fallback when needed.
+            {t("hero.subtitle")}
           </motion.p>
 
           <motion.div
@@ -117,7 +117,7 @@ export function Hero() {
               className="h-12 w-full rounded-xl bg-rose-600 px-7 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600 sm:w-auto"
             >
               <Send aria-hidden="true" />
-              Send Files
+              {t("hero.sendFiles")}
             </Button>
             <Button
               size="lg"
@@ -126,7 +126,7 @@ export function Hero() {
               className="h-12 w-full rounded-xl px-7 text-base sm:w-auto"
             >
               <Download aria-hidden="true" />
-              Receive Files
+              {t("hero.receiveFiles")}
             </Button>
           </motion.div>
 
@@ -135,7 +135,7 @@ export function Hero() {
             aria-label="Key guarantees"
             className="mt-10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2.5"
           >
-            {TRUST_ITEMS.map(({ icon: Icon, label }) => (
+            {trustItems.map(({ icon: Icon, label }) => (
               <li
                 key={label}
                 className="inline-flex items-center gap-2 text-sm text-muted-foreground"

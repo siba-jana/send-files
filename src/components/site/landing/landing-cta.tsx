@@ -49,7 +49,7 @@ export function LandingCta({
                   className="h-12 rounded-xl bg-rose-600 px-7 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
                   asChild
                 >
-                  <a href="/#transfer">
+                  <a href="/files-transfer-online">
                     <Send aria-hidden="true" />
                     {ctaLabel}
                   </a>

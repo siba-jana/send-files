@@ -82,6 +82,7 @@ import { scrollToTransfer } from "./scroll-utils";
 import { SessionLog } from "./session-log";
 import { TelemetryChart } from "./telemetry-chart";
 import { formatDuration } from "./format-utils";
+import { useI18n } from "@/i18n/context";
 
 const QrDialog = dynamic(() => import("./qr-dialog"), { ssr: false });
 
@@ -243,6 +244,7 @@ function buildShareTargets(
 }
 
 export function SendPanel() {
+  const { t } = useI18n();
   const {
     supported,
     files,
@@ -404,11 +406,11 @@ export function SendPanel() {
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-rose-500 opacity-60" />
                 <span className="relative inline-flex size-2.5 rounded-full bg-rose-600 dark:bg-rose-500" />
               </span>
-              Waiting for recipient
+              {t("transfer.waitingRecipient")}
             </p>
 
             <p className="mt-7 text-xs font-semibold tracking-[0.2em] text-muted-foreground uppercase">
-              Transfer code
+              {t("transfer.transferCodeLabel")}
             </p>
             <div className="relative mt-2">
               <span
@@ -428,7 +430,7 @@ export function SendPanel() {
                 htmlFor="share-link"
                 className="text-xs font-medium text-muted-foreground"
               >
-                Share link
+                {t("transfer.shareLinkLabel")}
               </Label>
               <div className="flex items-center gap-2">
                 <Input
@@ -445,7 +447,7 @@ export function SendPanel() {
                   className="size-11 shrink-0 rounded-xl"
                   aria-label="Copy share link"
                   onClick={() =>
-                    shareLink && void copyText(shareLink, "Link copied")
+                    shareLink && void copyText(shareLink, t("common.copied"))
                   }
                 >
                   <Copy aria-hidden="true" />
@@ -458,12 +460,12 @@ export function SendPanel() {
                 type="button"
                 className="col-span-2 h-11 rounded-xl bg-rose-600 text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600 sm:col-span-1"
                 onClick={() =>
-                  shareLink && void copyText(shareLink, "Link copied")
+                  shareLink && void copyText(shareLink, t("common.copied"))
                 }
                 title="Shortcut: L"
               >
                 <Link2 aria-hidden="true" />
-                Copy Link
+                {t("transfer.copyLink")}
                 <KbdHint onPrimary>l</KbdHint>
               </Button>
               <Button
@@ -471,11 +473,11 @@ export function SendPanel() {
                 variant="outline"
                 className="h-11 rounded-xl"
                 onClick={() =>
-                  info && void copyText(info.code, "Code copied")
+                  info && void copyText(info.code, t("common.copied"))
                 }
                 title="Shortcut: C"
               >
-                Copy Code
+                {t("transfer.copyCode")}
                 <KbdHint>c</KbdHint>
               </Button>
               <Button
@@ -485,7 +487,7 @@ export function SendPanel() {
                 onClick={() => setQrOpen(true)}
               >
                 <QrCode aria-hidden="true" />
-                Show QR
+                {t("transfer.showQr")}
               </Button>
             </div>
 
@@ -539,7 +541,7 @@ export function SendPanel() {
               onClick={() => void cancel("Cancelled by sender")}
             >
               <CircleX aria-hidden="true" />
-              Cancel Transfer
+              {t("transfer.cancelTransfer")}
             </Button>
 
             <p className="mt-6 inline-flex items-start gap-2 text-sm text-muted-foreground">
@@ -547,11 +549,11 @@ export function SendPanel() {
                 aria-hidden="true"
                 className="mt-0.5 size-4 shrink-0"
               />
-              Keep this tab open — files transfer directly from your browser.
+              {t("transfer.transferReadyDesc")}
             </p>
             <p className="mt-2.5 inline-flex items-center gap-1.5 text-xs text-muted-foreground">
               <Clock aria-hidden="true" className="size-3.5" />
-              {countdown ? `Expires in ${countdown}` : "Expires soon"}
+              {countdown ? `${t("transfer.expiresIn")} ${countdown}` : t("transfer.expiresIn")}
             </p>
 
             {/* Live event timeline for this session (sender view). */}
@@ -631,14 +633,14 @@ export function SendPanel() {
             aria-hidden="true"
             className="size-12 text-emerald-600 dark:text-emerald-500"
           />
-          <h3 className="mt-4 text-xl font-semibold">Transfer complete</h3>
+          <h3 className="mt-4 text-xl font-semibold">{t("transfer.completed")}</h3>
           <p className="mt-1.5 text-sm text-muted-foreground tabular-nums">
             {files.length} file{files.length === 1 ? "" : "s"} •{" "}
             {formatBytes(totalBytes)}
           </p>
           <p className="mt-4 inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-400">
             <ShieldCheck aria-hidden="true" className="size-3.5" />
-            SHA-256 verified ✓
+            {t("transfer.sha256Verified")} ✓
           </p>
           {duration !== null && (
             <p className="mt-2.5 inline-flex flex-wrap items-center justify-center gap-x-3 gap-y-1 rounded-full border bg-muted/40 px-3.5 py-1 text-xs text-muted-foreground tabular-nums">
@@ -685,7 +687,7 @@ export function SendPanel() {
             }}
           >
             <Upload aria-hidden="true" />
-            Send More Files
+            {t("transfer.newTransfer")}
           </Button>
         </CardContent>
       </Card>
@@ -700,7 +702,7 @@ export function SendPanel() {
             aria-hidden="true"
             className="size-12 text-muted-foreground"
           />
-          <h3 className="mt-4 text-xl font-semibold">Transfer cancelled</h3>
+          <h3 className="mt-4 text-xl font-semibold">{t("transfer.cancel")}</h3>
           <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
             The transfer was cancelled before it finished. No files were
             shared.
@@ -715,7 +717,7 @@ export function SendPanel() {
             }}
           >
             <Upload aria-hidden="true" />
-            Send More Files
+            {t("transfer.newTransfer")}
           </Button>
         </CardContent>
       </Card>
@@ -728,7 +730,7 @@ export function SendPanel() {
         <CardContent className="p-6 sm:p-8">
           <Alert variant="destructive">
             <TriangleAlert />
-            <AlertTitle>Transfer failed</AlertTitle>
+            <AlertTitle>{t("transfer.failed")}</AlertTitle>
             <AlertDescription>
               {error ?? "Something went wrong while setting up the transfer."}
             </AlertDescription>
@@ -757,7 +759,7 @@ export function SendPanel() {
             aria-hidden="true"
             className="size-12 text-muted-foreground"
           />
-          <h3 className="mt-4 text-xl font-semibold">This transfer has expired.</h3>
+          <h3 className="mt-4 text-xl font-semibold">{t("transfer.transferExpired")}</h3>
           <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
             The share window ran out. Start a new transfer to send these files.
           </p>
@@ -770,7 +772,7 @@ export function SendPanel() {
             }}
           >
             <Upload aria-hidden="true" />
-            Start New Transfer
+            {t("transfer.newTransfer")}
           </Button>
         </CardContent>
       </Card>
@@ -823,14 +825,14 @@ export function SendPanel() {
           />
           <p className={cn("font-medium", files.length > 0 ? "mt-2 text-sm" : "mt-4")}>
             {dragOver
-              ? "Drop files here"
+              ? t("transfer.dropzoneActive")
               : files.length > 0
-                ? "Drop more files here"
-                : "Drag & drop files here"}
+                ? t("transfer.dropzoneTitle")
+                : t("transfer.dropzoneTitle")}
           </p>
           {files.length === 0 && (
             <p className="mt-1 text-sm text-muted-foreground">
-              or choose files from your device
+              {t("transfer.dropzoneSubtitle")}
             </p>
           )}
           <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
@@ -840,7 +842,7 @@ export function SendPanel() {
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload aria-hidden="true" />
-              Select Files
+              {t("transfer.addFiles")}
             </Button>
             {folderPickerSupported && (
               <Button
@@ -850,7 +852,7 @@ export function SendPanel() {
                 onClick={() => folderInputRef.current?.click()}
               >
                 <FolderUp aria-hidden="true" />
-                Select Folder
+                {t("transfer.addFolder")}
               </Button>
             )}
           </div>
@@ -1021,7 +1023,7 @@ export function SendPanel() {
                 onClick={clearFiles}
               >
                 <X aria-hidden="true" />
-                Clear
+                {t("transfer.clearAll")}
               </Button>
             </div>
             {/* Screen-reader feedback for reorders (drag has no native
@@ -1077,10 +1079,10 @@ export function SendPanel() {
                         htmlFor="use-password-switch"
                         className="text-sm font-medium"
                       >
-                        Password protect
+                        {t("transfer.passwordProtect")}
                       </Label>
                       <p className="mt-0.5 text-xs text-muted-foreground">
-                        Recipients must enter the password to unlock the files.
+                        {t("transfer.passwordHint")}
                       </p>
                     </div>
                   </div>
@@ -1125,7 +1127,7 @@ export function SendPanel() {
 
               <div className="space-y-2">
                 <Label htmlFor="expiry-select" className="text-sm font-medium">
-                  Link expires after
+                  {t("transfer.expiryTime")}
                 </Label>
                 <Select
                   value={String(options.expiresInHours)}
@@ -1209,12 +1211,12 @@ export function SendPanel() {
           {creating ? (
             <>
               <LoaderCircle aria-hidden="true" className="animate-spin" />
-              Creating transfer…
+              {t("transfer.creatingTransfer")}
             </>
           ) : (
             <>
               <Upload aria-hidden="true" />
-              Create Transfer
+              {t("transfer.startTransferBtn")}
             </>
           )}
         </Button>
@@ -1230,7 +1232,7 @@ export function SendPanel() {
             <div className="flex items-center justify-between gap-2">
               <p className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <History aria-hidden="true" className="size-4" />
-                Recent transfers
+                {t("transfer.historyTitle")}
                 <span className="text-xs font-normal">&nbsp;&bull; this browser only
                 </span>
               </p>
