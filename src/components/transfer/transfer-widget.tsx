@@ -90,7 +90,7 @@ export function TransferWidget({ className }: TransferWidgetProps) {
   return (
     <section
       id="transfer"
-      aria-labelledby="transfer-heading"
+      aria-label={mode === "send" ? t("hero.sendFiles") : t("hero.receiveFiles")}
       className={`scroll-mt-24 py-12 sm:py-16 ${className ?? ""}`}
     >
       <Toaster richColors position="top-center" theme={isDark ? "dark" : "light"} />
@@ -101,18 +101,6 @@ export function TransferWidget({ className }: TransferWidgetProps) {
       </p>
 
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6">
-        <div className="mb-8 text-center">
-          <h2
-            id="transfer-heading"
-            className="text-2xl font-semibold tracking-tight sm:text-3xl"
-          >
-            {mode === "send" ? t("hero.sendFiles") : t("hero.receiveFiles")}
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-pretty text-sm text-muted-foreground sm:text-base">
-            {mode === "send" ? t("transfer.dropzoneSubtitle") : t("transfer.receiveSubtitle")}
-          </p>
-        </div>
-
         <Tabs
           value={mode}
           onValueChange={(value) => setMode(value === "receive" ? "receive" : "send")}
