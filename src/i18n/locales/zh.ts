@@ -220,6 +220,8 @@ export const zh: Dictionary = {
   chatgptToPdf: {
     title: "ChatGPT 转 PDF 工具",
     subtitle: "粘贴 ChatGPT 文本或上传 .md 文件，立即生成排版优美的 PDF 文档。",
+    metaDesc:
+      "免费在线将 ChatGPT 文本转换为 PDF。粘贴您的回答，自定义排版格式，即刻下载整洁专业的 PDF 文档。",
     pasteButton: "从 ChatGPT 粘贴",
     uploadButton: "上传 .md",
     sampleButton: "示例内容",

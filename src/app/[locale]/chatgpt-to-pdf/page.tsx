@@ -29,8 +29,9 @@ function StructuredData({ locale }: { locale: Locale }) {
   const toolDict = dict.chatgptToPdf;
   const pageTitle = toolDict?.title || "ChatGPT to PDF Converter";
   const pageDesc =
+    toolDict?.metaDesc ||
     toolDict?.subtitle ||
-    "Convert ChatGPT text, code snippets, LaTeX math equations, and conversations into print-ready PDF documents with 100% in-browser privacy.";
+    "Convert ChatGPT text to PDF online for free. Paste your responses, customize formatting, and download clean, professional PDF documents instantly.";
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -107,8 +108,9 @@ export async function generateMetadata({
     ? `${toolDict.title} — ${SITE_NAME}`
     : `Convert ChatGPT Text to PDF Online (Free, Fast & Easy) — ${SITE_NAME}`;
   const pageDescription =
+    toolDict?.metaDesc ||
     toolDict?.subtitle ||
-    "Easily convert ChatGPT conversations, prompts, code snippets, and markdown text into professional, print-ready PDF documents. Includes LaTeX math, syntax highlighting, and 100% browser privacy.";
+    "Convert ChatGPT text to PDF online for free. Paste your responses, customize formatting, and download clean, professional PDF documents instantly.";
 
   return {
     title: pageTitle,

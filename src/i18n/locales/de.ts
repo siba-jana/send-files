@@ -228,6 +228,8 @@ export const de: Dictionary = {
   chatgptToPdf: {
     title: "ChatGPT zu PDF Konverter",
     subtitle: "Fügen Sie Ihren ChatGPT-Text ein oder laden Sie eine .md-Datei hoch, um sofort ein sauberes PDF zu erhalten.",
+    metaDesc:
+      "ChatGPT-Text kostenlos online in PDF umwandeln. Fügen Sie Ihre Antworten ein, passen Sie das Format an und laden Sie saubere, professionelle PDF-Dokumente sofort herunter.",
     pasteButton: "Aus ChatGPT einfügen",
     uploadButton: ".md hochladen",
     sampleButton: "Beispieltext",

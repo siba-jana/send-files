@@ -228,6 +228,8 @@ export const hi: Dictionary = {
   chatgptToPdf: {
     title: "ChatGPT से PDF कनवर्टर",
     subtitle: "ChatGPT टेक्स्ट पेस्ट करें या .md फ़ाइल अपलोड करके तुरंत साफ़ PDF डाउनलोड करें।",
+    metaDesc:
+      "ChatGPT टेक्स्ट को मुफ़्त में ऑनलाइन PDF में बदलें। अपने उत्तर पेस्ट करें, फ़ॉर्मेटिंग कस्टमाइज़ करें और तुरंत साफ़, पेशेवर PDF दस्तावेज़ डाउनलोड करें।",
     pasteButton: "ChatGPT से पेस्ट करें",
     uploadButton: ".md अपलोड करें",
     sampleButton: "नमूना टेक्स्ट",

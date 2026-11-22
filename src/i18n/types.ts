@@ -28,6 +28,7 @@ export interface FaqItem {
 export interface ChatGptToPdfDictionary {
   title: string;
   subtitle: string;
+  metaDesc?: string;
   pasteButton: string;
   uploadButton: string;
   sampleButton: string;

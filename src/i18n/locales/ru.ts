@@ -219,6 +219,8 @@ export const ru: Dictionary = {
   chatgptToPdf: {
     title: "Конвертер ChatGPT в PDF",
     subtitle: "Вставьте текст ChatGPT или перетащите файл .md, чтобы мгновенно получить чистый PDF.",
+    metaDesc:
+      "Конвертируйте текст ChatGPT в PDF онлайн бесплатно. Вставьте ответы, настройте оформление и мгновенно скачайте аккуратный профессиональный PDF-документ.",
     pasteButton: "Вставить из ChatGPT",
     uploadButton: "Загрузить .md",
     sampleButton: "Пример текста",
