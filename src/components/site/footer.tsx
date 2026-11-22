@@ -1,8 +1,12 @@
+"use client"
+
 import { Logo } from "@/components/site/logo"
 import { FooterNav } from "@/components/site/footer-nav"
+import { useI18n } from "@/i18n/context"
 
 export function Footer() {
   const year = new Date().getFullYear()
+  const { t } = useI18n()
 
   return (
     <footer className="mt-auto border-t bg-muted/30 print:hidden">
@@ -19,7 +23,7 @@ export function Footer() {
               <Logo />
             </a>
             <p className="text-sm text-muted-foreground">
-              Send files directly from browser to browser.
+              {t("footer.tagline")}
             </p>
           </div>
 
@@ -29,7 +33,7 @@ export function Footer() {
         <div className="mt-8 flex flex-col gap-3 border-t pt-6 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
             <p className="text-xs text-muted-foreground">
-              © {year} I Love Doc — ilovedoc.org
+              © {year} {t("footer.copyright")}
             </p>
             <a
               href="/?admin=1"
@@ -48,12 +52,11 @@ export function Footer() {
                 <rect width="18" height="11" x="3" y="11" rx="2" ry="2" />
                 <path d="M7 11V7a5 5 0 0 1 10 0v4" />
               </svg>
-              Admin
+              {t("footer.admin")}
             </a>
           </div>
           <p className="max-w-xl text-xs leading-relaxed text-muted-foreground/80">
-            Designed for direct peer-to-peer transfer, with encrypted relay
-            fallback when direct connectivity isn’t possible.
+            {t("footer.disclaimer")}
           </p>
         </div>
       </div>

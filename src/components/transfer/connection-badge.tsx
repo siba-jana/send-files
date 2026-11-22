@@ -7,6 +7,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useI18n } from "@/i18n/context";
 import { cn } from "@/lib/utils";
 import type { ConnectionKind } from "@/lib/transfer/sender";
 
@@ -29,6 +30,8 @@ const BADGE_STYLES: Record<ConnectionKind, string> = {
  * NEVER claims "direct" when the connection is relayed.
  */
 export function ConnectionBadge({ kind, className }: ConnectionBadgeProps) {
+  const { t } = useI18n();
+
   const base = cn(
     "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium whitespace-nowrap",
     BADGE_STYLES[kind],
@@ -41,7 +44,7 @@ export function ConnectionBadge({ kind, className }: ConnectionBadgeProps) {
         <TooltipTrigger asChild>
           <span className={base} tabIndex={0}>
             <Zap aria-hidden="true" className="size-3.5" />
-            Direct P2P
+            {t("transfer.directP2p")}
           </span>
         </TooltipTrigger>
         <TooltipContent side="left" className="max-w-56">
@@ -58,7 +61,7 @@ export function ConnectionBadge({ kind, className }: ConnectionBadgeProps) {
         <TooltipTrigger asChild>
           <span className={base} tabIndex={0}>
             <Shield aria-hidden="true" className="size-3.5" />
-            Secure relay
+            {t("transfer.secureRelay")}
           </span>
         </TooltipTrigger>
         <TooltipContent side="left" className="max-w-56">
@@ -72,7 +75,7 @@ export function ConnectionBadge({ kind, className }: ConnectionBadgeProps) {
   return (
     <span className={base}>
       <LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />
-      Connecting…
+      {t("transfer.connecting")}
     </span>
   );
 }

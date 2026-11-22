@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { formatBytes } from "@/lib/transfer/stats";
+import { useI18n } from "@/i18n/context";
 
 interface StatsPayload {
   transfersCreated: number;
@@ -52,7 +53,6 @@ function useCountUp(target: number, active: boolean, durationMs = 900): number {
     const start = performance.now();
     const step = (now: number) => {
       const t = Math.min(1, (now - start) / durationMs);
-      // easeOutCubic for a satisfying deceleration
       const eased = 1 - Math.pow(1 - t, 3);
       setAnimated(Math.round(target * eased));
       frameRef.current = t < 1 ? requestAnimationFrame(step) : null;
@@ -87,14 +87,13 @@ function StatBlock({ icon: Icon, label, display }: { icon: LucideIcon; label: st
 }
 
 /**
- * Trust strip with live aggregate numbers straight from the database —
- * honest counters only (every number is a real recorded event). Hidden
- * entirely when the API is unreachable rather than showing zeros.
+ * Trust strip with live aggregate numbers straight from the database.
  */
 export function StatsStrip() {
   const [stats, setStats] = useState<StatsPayload | null>(null);
   const [failed, setFailed] = useState(false);
   const reduceMotion = usePrefersReducedMotion();
+  const { t } = useI18n();
 
   useEffect(() => {
     let cancelled = false;
@@ -130,28 +129,28 @@ export function StatsStrip() {
   const items: StatItem[] = [
     {
       icon: ArrowLeftRight,
-      label: "Transfers created",
+      label: t("stats.transfersCreated"),
       display: stats ? shown(transfersCreated, stats.transfersCreated).toLocaleString() : "—",
     },
     {
       icon: PackageCheck,
-      label: "Deliveries completed",
+      label: t("stats.deliveriesCompleted"),
       display: stats ? shown(deliveriesCompleted, stats.deliveriesCompleted).toLocaleString() : "—",
     },
     {
       icon: FileCheck2,
-      label: "Files delivered",
+      label: t("stats.filesDelivered"),
       display: stats ? shown(filesDelivered, stats.filesDelivered).toLocaleString() : "—",
     },
     {
       icon: HardDriveDownload,
-      label: "Data moved browser to browser",
+      label: t("stats.dataMoved"),
       display: bytesDisplay,
     },
   ];
 
   return (
-    <section aria-label="Usage statistics" className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
+    <section aria-label={t("stats.title")} className="mx-auto w-full max-w-6xl px-4 py-10 sm:px-6 sm:py-14 lg:px-8">
       <div className="relative overflow-hidden rounded-2xl border bg-card/60 shadow-sm">
         {/* faint rose wash + top hairline */}
         <div aria-hidden="true" className="pointer-events-none absolute inset-0">
@@ -170,7 +169,7 @@ export function StatsStrip() {
         </div>
       </div>
       <p className="mt-3 text-center text-xs text-muted-foreground">
-        Live counts from this deployment — aggregate metadata only, never file contents.
+        {t("stats.footerNote")}
       </p>
     </section>
   );

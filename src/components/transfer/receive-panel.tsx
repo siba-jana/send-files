@@ -60,6 +60,7 @@ import {
 } from "@/lib/transfer/received";
 import { formatRelativeTime } from "@/lib/transfer/recent";
 import { formatDuration } from "./format-utils";
+import { useI18n } from "@/i18n/context";
 import { buildZipBlob, canZip } from "@/lib/transfer/zip";
 import { ConnectionSteps, ProgressPanel } from "./progress-panel";
 import { FileIcon } from "./file-icon";
@@ -164,6 +165,7 @@ function formatCode(code: string): string {
 }
 
 export function ReceivePanel({ registerController }: ReceivePanelProps) {
+  const { t } = useI18n();
   const {
     supported,
     fsSupported,
@@ -340,7 +342,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
       <Card className="gap-0 rounded-2xl py-0 fade-slide-in">
         <CardContent className="p-6 sm:p-8">
           <div className="text-center">
-            <h3 className="text-lg font-semibold">Files ready to receive</h3>
+            <h3 className="text-lg font-semibold">{t("transfer.incomingFiles")}</h3>
             <p className="mt-1.5 inline-flex items-center justify-center gap-1.5 text-sm text-muted-foreground">
               <User aria-hidden="true" className="size-4" />
               From: {meta?.senderName?.trim() || "Anonymous sender"}
@@ -410,14 +412,14 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                   className="flex items-center gap-1.5 text-sm font-medium"
                 >
                   <Lock aria-hidden="true" className="size-4 text-muted-foreground" />
-                  Enter the transfer password
+                  {t("transfer.enterPasswordDesc")}
                 </Label>
                 <Input
                   id="transfer-password-input"
                   type="password"
                   value={password}
                   autoComplete="current-password"
-                  placeholder="Password"
+                  placeholder={t("transfer.passwordPlaceholder")}
                   className="h-11 rounded-xl"
                   autoFocus
                   onChange={(e) => setPassword(e.target.value)}
@@ -437,12 +439,12 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                   {unlocking ? (
                     <>
                       <LoaderCircle aria-hidden="true" className="animate-spin" />
-                      Unlocking…
+                      {t("transfer.connecting")}
                     </>
                   ) : (
                     <>
                       <Lock aria-hidden="true" />
-                      Unlock
+                      {t("transfer.unlockAndDownload")}
                     </>
                   )}
                 </Button>
@@ -452,7 +454,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                   className="h-11 flex-1 rounded-xl"
                   onClick={decline}
                 >
-                  Back
+                  {t("common.cancel")}
                 </Button>
               </div>
             </form>
@@ -727,7 +729,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                         onClick={() => downloadFile(item)}
                       >
                         <Download aria-hidden="true" />
-                        Download
+                        {t("transfer.downloadFile")}
                       </Button>
                     )
                   )}
@@ -736,7 +738,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             </ul>
           ) : (
             <p className="mt-4 text-center text-sm text-muted-foreground">
-              The sender cancelled before any files finished.
+              {t("transfer.cancel")}
             </p>
           )}
 
@@ -769,7 +771,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                     ) : (
                       <FileArchive aria-hidden="true" />
                     )}
-                    {zipping ? "Building ZIP…" : `Download All as ZIP (${downloadable.length})`}
+                    {zipping ? "Building ZIP…" : `${t("transfer.downloadAllZip")} (${downloadable.length})`}
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -791,7 +793,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
                 onClick={() => downloadAll(results)}
               >
                 <Download aria-hidden="true" />
-                Download files separately{downloadable.length > 1 ? ` (${downloadable.length})` : ""}
+                {t("transfer.saveAll")}{downloadable.length > 1 ? ` (${downloadable.length})` : ""}
               </Button>
             )}
             <Button
@@ -807,7 +809,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
               }}
             >
               <RotateCcw aria-hidden="true" />
-              Receive More Files
+              {t("transfer.newTransfer")}
             </Button>
           </div>
         </CardContent>
@@ -822,9 +824,9 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
       <Card className="rounded-2xl fade-slide-in">
         <CardContent className="flex flex-col items-center p-6 text-center sm:p-10">
           <CircleX aria-hidden="true" className="size-12 text-muted-foreground" />
-          <h3 className="mt-4 text-xl font-semibold">Transfer cancelled</h3>
+          <h3 className="mt-4 text-xl font-semibold">{t("transfer.cancel")}</h3>
           <p className="mt-1.5 max-w-sm text-sm text-muted-foreground">
-            {error ?? "The transfer was stopped before it finished."}
+            {error ?? t("transfer.cancel")}
           </p>
           <Button
             type="button"
@@ -835,7 +837,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             }}
           >
             <RotateCcw aria-hidden="true" />
-            Enter Another Code
+            {t("transfer.newTransfer")}
           </Button>
         </CardContent>
       </Card>
@@ -848,9 +850,9 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
         <CardContent className="p-6 sm:p-8">
           <Alert variant="destructive">
             <TriangleAlert />
-            <AlertTitle>Couldn&apos;t receive this transfer</AlertTitle>
+            <AlertTitle>{t("transfer.failed")}</AlertTitle>
             <AlertDescription>
-              {error ?? "Something went wrong while looking up the transfer."}
+              {error ?? t("common.error")}
             </AlertDescription>
           </Alert>
           <Button
@@ -872,15 +874,15 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
     <Card className="gap-0 rounded-2xl py-0">
       <CardContent className="p-6 sm:p-8">
         <div className="text-center">
-          <h3 className="text-lg font-semibold">Receive files</h3>
+          <h3 className="text-lg font-semibold">{t("transfer.receiveTitle")}</h3>
           <p className="mt-1.5 text-sm text-muted-foreground">
-            Enter the 6-digit code the sender shared with you.
+            {t("transfer.receiveSubtitle")}
           </p>
         </div>
 
         <div className="mt-6 space-y-3">
           <Label htmlFor="transfer-code-input" className="sr-only">
-            Transfer code
+            {t("transfer.transferCodeLabel")}
           </Label>
           <input
             id="transfer-code-input"
@@ -893,7 +895,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             autoComplete="off"
             maxLength={6}
             placeholder="••••••"
-            aria-label="Transfer code"
+            aria-label={t("transfer.transferCodeLabel")}
             className="h-16 w-full rounded-2xl border-2 bg-background text-center text-3xl font-semibold tracking-[0.5em] ps-[0.25em] tabular-nums transition-colors outline-none placeholder:text-muted-foreground/50 focus-visible:border-rose-500 focus-visible:ring-4 focus-visible:ring-rose-500/20 dark:focus-visible:border-rose-400"
           />
           <Button
@@ -905,7 +907,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             className="h-12 w-full rounded-xl bg-rose-600 text-base text-white shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:shadow-rose-500/20 dark:hover:bg-rose-600"
           >
             <Download aria-hidden="true" />
-            Receive Files
+            {t("transfer.connectAndDownload")}
             <KbdHint onPrimary>Enter</KbdHint>
           </Button>
         </div>
@@ -922,14 +924,14 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             className="flex items-center gap-1.5 text-sm font-medium"
           >
             <Link2 aria-hidden="true" className="size-4 text-muted-foreground" />
-            Have a sharing link?
+            {t("transfer.shareLinkLabel")}
           </Label>
           <div className="flex flex-col gap-2.5 sm:flex-row">
             <Input
               id="transfer-link-input"
               type="text"
               value={linkValue}
-              placeholder="Paste the link that starts with the site address"
+              placeholder={t("transfer.codeOrLinkPlaceholder")}
               className="h-11 flex-1 rounded-xl"
               onChange={(e) => setLinkValue(e.target.value)}
             />
@@ -939,7 +941,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
               disabled={!linkValue.trim()}
               className="h-11 shrink-0 rounded-xl"
             >
-              Open Transfer Link
+              {t("transfer.connectAndDownload")}
               <ArrowRight aria-hidden="true" />
             </Button>
           </div>
@@ -956,7 +958,7 @@ export function ReceivePanel({ registerController }: ReceivePanelProps) {
             <div className="flex items-center justify-between gap-2">
               <p className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground">
                 <History aria-hidden="true" className="size-4" />
-                Recently received
+                {t("transfer.historyTitle")}
                 <span className="text-xs font-normal">
                   &nbsp;&bull; this browser only
                 </span>

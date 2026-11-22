@@ -18,47 +18,44 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-const FEATURES = [
-  {
-    icon: Lock,
-    title: "End-to-end encrypted",
-    description:
-      "Files travel over a DTLS-encrypted WebRTC channel secured by modern cryptography.",
-  },
-  {
-    icon: HardDrive,
-    title: "No permanent storage",
-    description:
-      "Files are never stored in the cloud. The server only coordinates the handshake between browsers.",
-  },
-  {
-    icon: Eye,
-    title: "Transparent about relays",
-    description:
-      "If a network requires a relay, we tell you. The connection badge always shows “Direct P2P” or “Secure relay”.",
-  },
-  {
-    icon: FileCheck2,
-    title: "Integrity verified",
-    description:
-      "Each file is hashed with SHA-256 on both ends and verified before delivery is confirmed.",
-  },
-  {
-    icon: Timer,
-    title: "Ephemeral sessions",
-    description:
-      "Transfer codes and links expire automatically — from 1 hour to 7 days, your choice.",
-  },
-  {
-    icon: UserX,
-    title: "No account required",
-    description:
-      "No sign-up, no email, no tracking. We collect the minimum metadata needed to connect two browsers.",
-  },
-] as const
+import { useI18n } from "@/i18n/context"
 
 export function SecuritySection() {
+  const { t } = useI18n()
+
+  const features = [
+    {
+      icon: Lock,
+      title: t("security.feat1Title"),
+      description: t("security.feat1Desc"),
+    },
+    {
+      icon: HardDrive,
+      title: t("security.feat2Title"),
+      description: t("security.feat2Desc"),
+    },
+    {
+      icon: Eye,
+      title: t("security.feat3Title"),
+      description: t("security.feat3Desc"),
+    },
+    {
+      icon: FileCheck2,
+      title: t("security.feat4Title"),
+      description: t("security.feat4Desc"),
+    },
+    {
+      icon: Timer,
+      title: t("security.feat5Title"),
+      description: t("security.feat5Desc"),
+    },
+    {
+      icon: UserX,
+      title: t("security.feat6Title"),
+      description: t("security.feat6Desc"),
+    },
+  ]
+
   return (
     <MotionConfig reducedMotion="user">
       <section
@@ -78,17 +75,15 @@ export function SecuritySection() {
               id="security-heading"
               className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
             >
-              Privacy by design
+              {t("security.heading")}
             </h2>
             <p className="mt-4 text-pretty text-base text-muted-foreground sm:text-lg">
-              No accounts, no cloud storage, no tracking. Files travel straight
-              from your browser to your recipient’s — here is exactly how that
-              works.
+              {t("security.subheading")}
             </p>
           </motion.div>
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-            {FEATURES.map(({ icon: Icon, title, description }, index) => (
+            {features.map(({ icon: Icon, title, description }, index) => (
               <motion.div
                 key={title}
                 className="group/card h-full"
@@ -125,8 +120,7 @@ export function SecuritySection() {
           >
             <Info aria-hidden="true" className="size-4 shrink-0" />
             <span>
-              Designed for direct peer-to-peer transfer, with encrypted relay
-              fallback when direct connectivity isn’t possible.
+              {t("footer.disclaimer")}
             </span>
           </motion.p>
 
@@ -141,7 +135,7 @@ export function SecuritySection() {
               href="/legal/privacy"
               className="group inline-flex items-center gap-1.5 rounded-sm font-medium text-foreground underline decoration-rose-600/40 underline-offset-4 outline-none transition-colors hover:decoration-rose-600 focus-visible:ring-2 focus-visible:ring-ring"
             >
-              Read the legally binding version — our Privacy Policy
+              {t("common.privacy")}
               <ArrowRight
                 aria-hidden="true"
                 className="size-3.5 text-muted-foreground transition-transform duration-200 group-hover:translate-x-0.5 group-hover:text-rose-600 dark:group-hover:text-rose-400"

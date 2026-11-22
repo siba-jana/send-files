@@ -17,35 +17,34 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-
-const STEPS = [
-  {
-    icon: FolderUp,
-    title: "Select your files",
-    description:
-      "Choose one file or hundreds. They stay on your device until a recipient connects — nothing is uploaded.",
-  },
-  {
-    icon: Share2,
-    title: "Share the code",
-    description:
-      "Get a short transfer code, a share link, or a QR code. Send it to your recipient any way you like.",
-  },
-  {
-    icon: Network,
-    title: "Connect directly",
-    description:
-      "The two browsers negotiate an encrypted WebRTC channel and files stream peer-to-peer.",
-  },
-  {
-    icon: BadgeCheck,
-    title: "Verified delivery",
-    description:
-      "Every file is checked with SHA-256 integrity verification before it’s saved on the recipient’s device.",
-  },
-] as const
+import { useI18n } from "@/i18n/context"
 
 export function HowItWorks() {
+  const { t } = useI18n()
+
+  const steps = [
+    {
+      icon: FolderUp,
+      title: t("howItWorks.step1Title"),
+      description: t("howItWorks.step1Desc"),
+    },
+    {
+      icon: Share2,
+      title: t("howItWorks.step2Title"),
+      description: t("howItWorks.step2Desc"),
+    },
+    {
+      icon: Network,
+      title: t("howItWorks.step3Title"),
+      description: t("howItWorks.step3Desc"),
+    },
+    {
+      icon: BadgeCheck,
+      title: t("howItWorks.step4Title"),
+      description: t("howItWorks.step4Desc"),
+    },
+  ]
+
   return (
     <MotionConfig reducedMotion="user">
       <section
@@ -65,18 +64,17 @@ export function HowItWorks() {
               id="how-it-works-heading"
               className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
             >
-              How it works
+              {t("howItWorks.heading")}
             </h2>
             <p className="mt-4 text-pretty text-base text-muted-foreground sm:text-lg">
-              No cloud in between. Your files stream straight to the
-              recipient’s browser.
+              {t("howItWorks.subheading")}
             </p>
           </motion.div>
 
           <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {STEPS.map(({ icon: Icon, title, description }, index) => (
+            {steps.map(({ icon: Icon, title, description }, index) => (
               <motion.div
-                key={title}
+                key={index}
                 className="group/card h-full"
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
@@ -327,6 +325,7 @@ export function HowItWorks() {
               </svg>
             </CardContent>
           </Card>
+
           {/* Deeper guides: contextual links to the dedicated landing pages. */}
           <div className="mt-6 grid gap-4 sm:grid-cols-2">
             <motion.a
@@ -342,14 +341,13 @@ export function HowItWorks() {
                   aria-hidden="true"
                   className="size-4 text-rose-600 dark:text-rose-500"
                 />
-                The full technical guide
+                {t("footer.howItWorks")}
               </span>
               <span className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                Handshake, encryption, chunking, teardown — the complete
-                story of a transfer.
+                Handshake, encryption, chunking, teardown — the complete story of a transfer.
               </span>
               <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-500">
-                Read how it works
+                {t("footer.howItWorks")}
                 <ArrowRight
                   aria-hidden="true"
                   className="size-4 transition-transform duration-300 group-hover/guide:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/guide:translate-x-0"
@@ -369,14 +367,13 @@ export function HowItWorks() {
                   aria-hidden="true"
                   className="size-4 text-rose-600 dark:text-rose-500"
                 />
-                Sending something huge?
+                {t("footer.sendLargeFiles")}
               </span>
               <span className="mt-1.5 text-sm leading-relaxed text-muted-foreground">
-                Up to 10 TB per file, streamed direct — see the large-file
-                guide.
+                Up to 10 TB per file, streamed direct — see the large-file guide.
               </span>
               <span className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-rose-600 dark:text-rose-500">
-                Send large files
+                {t("footer.sendLargeFiles")}
                 <ArrowRight
                   aria-hidden="true"
                   className="size-4 transition-transform duration-300 group-hover/guide:translate-x-0.5 motion-reduce:transition-none motion-reduce:group-hover/guide:translate-x-0"

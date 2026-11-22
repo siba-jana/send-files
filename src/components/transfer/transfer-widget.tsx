@@ -6,6 +6,7 @@ import { Download, Send } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { normalizeCode } from "@/hooks/use-receive";
+import { useI18n } from "@/i18n/context";
 import { ReceivePanel, type ReceiveControllerApi } from "./receive-panel";
 import { SendPanel } from "./send-panel";
 
@@ -32,17 +33,13 @@ export interface TransferWidgetProps {
 }
 
 /**
- * Orchestrates the Send/Receive tabs. Both panels stay mounted at all times
- * (Radix `forceMount` + CSS `hidden`) so an in-flight transfer survives tab
- * switches. Also:
- *  - listens for the `ilovedoc:mode` CustomEvent (hero CTAs, header CTA),
- *  - on mount, consumes `?t=<token>` / `?code=<6 digits>` share params,
- *  - mounts the sonner `<Toaster />` used by both panels.
+ * Orchestrates the Send/Receive tabs.
  */
 export function TransferWidget({ className }: TransferWidgetProps) {
   const [mode, setMode] = useState<TransferMode>("send");
   const receiveApiRef = useRef<ReceiveControllerApi | null>(null);
   const didInitRef = useRef(false);
+  const { t, isRTL } = useI18n();
 
   const registerReceiveController = useCallback(
     (api: ReceiveControllerApi) => {
@@ -69,8 +66,6 @@ export function TransferWidget({ className }: TransferWidgetProps) {
   }, []);
 
   // Share-link entry: `/?t=<token>` or `/?code=<6 digits>` → receive flow.
-  // The tab switch reuses the public 'ilovedoc:mode' channel (same path as
-  // the hero/header CTAs), keeping a single mode-switching code path.
   useEffect(() => {
     if (didInitRef.current) return;
     didInitRef.current = true;
@@ -95,46 +90,30 @@ export function TransferWidget({ className }: TransferWidgetProps) {
   return (
     <section
       id="transfer"
-      aria-labelledby="transfer-heading"
+      aria-label={mode === "send" ? t("hero.sendFiles") : t("hero.receiveFiles")}
       className={`scroll-mt-24 py-12 sm:py-16 ${className ?? ""}`}
     >
       <Toaster richColors position="top-center" theme={isDark ? "dark" : "light"} />
       <p aria-live="polite" className="sr-only">
         {mode === "send"
-          ? "Send files mode selected."
-          : "Receive files mode selected."}
+          ? `${t("transfer.sendTab")} selected.`
+          : `${t("transfer.receiveTab")} selected.`}
       </p>
 
       <div className="mx-auto w-full max-w-2xl px-4 sm:px-6">
-        <div className="mb-8 text-center">
-          <h2
-            id="transfer-heading"
-            className="text-2xl font-semibold tracking-tight sm:text-3xl"
-          >
-            Start a transfer
-          </h2>
-          <p className="mx-auto mt-2 max-w-md text-pretty text-sm text-muted-foreground sm:text-base">
-            Send files straight to another browser — or enter a code to receive
-            yours.
-          </p>
-        </div>
-
         <Tabs
           value={mode}
           onValueChange={(value) => setMode(value === "receive" ? "receive" : "send")}
           className="gap-6"
         >
-          {/* Sliding active-tab thumb: glides between the two triggers
-              (transform-only animation — cheap, and disabled under
-              prefers-reduced-motion). Triggers sit above it (z-10) and keep
-              their own backgrounds transparent when active so the thumb
-              provides the "active pill". */}
-          <TabsList className="relative grid h-13 w-full grid-cols-2 rounded-xl">
+          <TabsList className="relative grid h-13 w-full grid-cols-2 rounded-xl p-1">
             <span
               aria-hidden="true"
-              className={`pointer-events-none absolute inset-y-1 left-1 z-0 w-[calc(50%_-_0.25rem)] rounded-lg bg-background shadow-sm ring-1 ring-black/[0.04] transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-input/30 dark:ring-white/[0.06] dark:shadow-none ${
+              className={`pointer-events-none absolute inset-y-1 start-1 z-0 w-[calc(50%-0.25rem)] rounded-lg bg-background shadow-sm ring-1 ring-black/[0.04] transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-input/30 dark:ring-white/[0.06] dark:shadow-none ${
                 mode === "receive"
-                  ? "translate-x-[calc(50%_-_0.25rem)]"
+                  ? isRTL
+                    ? "-translate-x-full"
+                    : "translate-x-full"
                   : "translate-x-0"
               }`}
             />
@@ -143,19 +122,17 @@ export function TransferWidget({ className }: TransferWidgetProps) {
               className="relative z-10 min-h-11 rounded-lg text-sm font-medium sm:text-base data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-transparent [&[data-state=active]_svg]:text-rose-600 dark:[&[data-state=active]_svg]:text-rose-400"
             >
               <Send aria-hidden="true" />
-              Send Files
+              {t("transfer.sendTab")}
             </TabsTrigger>
             <TabsTrigger
               value="receive"
               className="relative z-10 min-h-11 rounded-lg text-sm font-medium sm:text-base data-[state=active]:bg-transparent data-[state=active]:shadow-none dark:data-[state=active]:bg-transparent dark:data-[state=active]:border-transparent [&[data-state=active]_svg]:text-rose-600 dark:[&[data-state=active]_svg]:text-rose-400"
             >
               <Download aria-hidden="true" />
-              Receive Files
+              {t("transfer.receiveTab")}
             </TabsTrigger>
           </TabsList>
 
-          {/* forceMount keeps both engines alive across tab switches; the
-              inactive content is hidden via the HTML hidden attribute. */}
           <TabsContent value="send" forceMount className="data-[state=inactive]:hidden">
             <SendPanel />
           </TabsContent>
@@ -176,10 +153,14 @@ function enterReceiveMode() {
 
 function scrollToWidget() {
   window.setTimeout(() => {
+    const target = document.getElementById("transfer");
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    if (rect.top >= 0 && rect.top <= window.innerHeight * 0.4) return;
     const reduceMotion = window.matchMedia(
       "(prefers-reduced-motion: reduce)",
     ).matches;
-    document.getElementById("transfer")?.scrollIntoView({
+    target.scrollIntoView({
       behavior: reduceMotion ? "auto" : "smooth",
       block: "start",
     });

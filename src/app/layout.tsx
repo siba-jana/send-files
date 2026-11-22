@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import { I18nProvider } from "@/i18n/context";
+import { BootstrapScript } from "@/components/site/bootstrap-script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,11 +24,11 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   title: {
-    default: "ilovedoc.org — Send Files Directly From Browser to Browser",
+    default: "ilovedoc.org — Send Big Files Online Free",
     template: "%s · ilovedoc.org",
   },
   description:
-    "Fast peer-to-peer file sharing with encrypted WebRTC connections and automatic relay fallback when needed. No permanent cloud storage, no sign-up — just connect and transfer.",
+    "Send big files online for free with fast, secure file sharing. Transfer large files without signing up, installing software, or dealing with complicated steps.",
   keywords: [
     "file transfer",
     "peer to peer file sharing",
@@ -43,7 +45,7 @@ export const metadata: Metadata = {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
   openGraph: {
-    title: "ilovedoc.org — Send Files Directly From Browser to Browser",
+    title: "ilovedoc.org — Send Big Files Online Free",
     description:
       "Files transfer directly between browsers over encrypted WebRTC. No permanent cloud storage. No complicated setup.",
     url: SITE_URL,
@@ -61,7 +63,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ilovedoc.org — Send Files Directly From Browser to Browser",
+    title: "ilovedoc.org — Send Big Files Online Free",
     description:
       "Fast peer-to-peer file sharing with encrypted WebRTC connections and automatic relay fallback when needed.",
     images: ["/og-image.jpg"],
@@ -82,12 +84,6 @@ export const viewport: Viewport = {
   ],
 };
 
-/**
- * Apply the persisted theme before first paint to avoid a flash of the wrong
- * scheme (mirrors the header toggle: `.dark` class + localStorage "theme").
- */
-const themeBootstrap = `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.classList.add("dark");}catch(e){}})();`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -95,13 +91,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
-      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        {children}
+        <BootstrapScript />
+        <I18nProvider>{children}</I18nProvider>
       </body>
     </html>
   );
