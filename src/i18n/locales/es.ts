@@ -229,7 +229,7 @@ export const es: Dictionary = {
     title: "Convertidor de ChatGPT a PDF",
     subtitle: "Pega el texto de ChatGPT o arrastra un archivo .md para descargar un PDF limpio al instante.",
     metaDesc:
-      "Convierte texto de ChatGPT a PDF online gratis. Pega tus respuestas, personaliza el formato y descarga documentos PDF limpios y profesionales al instante.",
+      "Convierte texto de ChatGPT a PDF gratis en línea. Pega tus respuestas, ajusta el formato y descarga documentos PDF profesionales en segundos.",
     pasteButton: "Pegar de ChatGPT",
     uploadButton: "Subir .md",
     sampleButton: "Texto de ejemplo",

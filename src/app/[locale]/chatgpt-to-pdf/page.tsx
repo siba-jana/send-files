@@ -31,7 +31,7 @@ function StructuredData({ locale }: { locale: Locale }) {
   const pageDesc =
     toolDict?.metaDesc ||
     toolDict?.subtitle ||
-    "Convert ChatGPT text to PDF online for free. Paste your responses, customize formatting, and download clean, professional PDF documents instantly.";
+    "Convert ChatGPT text to PDF online for free. Paste your responses, customize the formatting, and download polished PDF documents in seconds.";
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -110,7 +110,7 @@ export async function generateMetadata({
   const pageDescription =
     toolDict?.metaDesc ||
     toolDict?.subtitle ||
-    "Convert ChatGPT text to PDF online for free. Paste your responses, customize formatting, and download clean, professional PDF documents instantly.";
+    "Convert ChatGPT text to PDF online for free. Paste your responses, customize the formatting, and download polished PDF documents in seconds.";
 
   return {
     title: pageTitle,

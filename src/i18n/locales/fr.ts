@@ -229,7 +229,7 @@ export const fr: Dictionary = {
     title: "Convertisseur ChatGPT en PDF",
     subtitle: "Collez votre texte ChatGPT ou déposez un fichier .md pour obtenir un PDF propre instantanément.",
     metaDesc:
-      "Convertissez du texte ChatGPT en PDF en ligne gratuitement. Collez vos réponses, personnalisez la mise en page et téléchargez instantanément des documents PDF professionnels.",
+      "Convertissez gratuitement du texte ChatGPT en PDF en ligne. Collez vos réponses, personnalisez la mise en page et téléchargez des PDF soignés en quelques secondes.",
     pasteButton: "Coller de ChatGPT",
     uploadButton: "Importer .md",
     sampleButton: "Exemple de texte",

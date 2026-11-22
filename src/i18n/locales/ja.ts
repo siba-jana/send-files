@@ -220,7 +220,7 @@ export const ja: Dictionary = {
     title: "ChatGPT PDF 変換ツール",
     subtitle: "ChatGPTのテキストを貼り付けるか、.mdファイルをドロップして、きれいなPDFを即座に作成します。",
     metaDesc:
-      "ChatGPTのテキストをオンラインで無料PDF変換。回答を貼り付け、レイアウトを調整して、美しく実用的なPDF文書を瞬時にダウンロードできます。",
+      "ChatGPTの文章をオンラインで無料でPDFに変換。回答を貼り付けてレイアウトを調整し、見やすいPDFとしてダウンロードできます。",
     pasteButton: "ChatGPTから貼り付け",
     uploadButton: ".mdをアップロード",
     sampleButton: "サンプルテキスト",

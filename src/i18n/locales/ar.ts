@@ -221,7 +221,7 @@ export const ar: Dictionary = {
     title: "محول نصوص ChatGPT إلى PDF",
     subtitle: "الصق نص ChatGPT أو أسقط ملف .md لتحميل مستند PDF أنيق وفوري.",
     metaDesc:
-      "حوّل نصوص ChatGPT إلى PDF أونلاين مجانًا. الصق إجاباتك، وخصص التنسيق، وحمّل مستندات PDF احترافية وأنيقة على الفور.",
+      "حوّل نص ChatGPT إلى PDF مجانًا عبر الإنترنت. الصق إجاباتك، وخصّص التنسيق، ثم نزّل ملف PDF منسقًا في ثوانٍ.",
     pasteButton: "لصق من ChatGPT",
     uploadButton: "رفع ملف .md",
     sampleButton: "نص تجريبي",
