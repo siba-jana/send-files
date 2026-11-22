@@ -35,6 +35,8 @@ export const zh: Dictionary = {
     titlePost: "",
     subtitle:
       "高速点对点 (P2P) 文件传输，采用端到端加密 WebRTC 连接并在需要时自动中继。无云端存储，无需注册，保护隐私。",
+    metaDesc:
+      "免费在线发送大文件，快速安全地分享文件。无需注册、无需安装软件，无需任何繁琐步骤即可传输大文件。",
     sendFiles: "发送文件",
     receiveFiles: "接收文件",
     trustE2e: "端到端加密",

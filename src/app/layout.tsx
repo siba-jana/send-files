@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s · ilovedoc.org",
   },
   description:
-    "Fast peer-to-peer file sharing with encrypted WebRTC connections and automatic relay fallback when needed. No permanent cloud storage, no sign-up — just connect and transfer.",
+    "Send big files online for free with fast, secure file sharing. Transfer large files without registration, software installation, or complicated steps.",
   keywords: [
     "file transfer",
     "peer to peer file sharing",

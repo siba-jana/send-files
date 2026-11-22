@@ -35,6 +35,8 @@ export const en: Dictionary = {
     titlePost: "",
     subtitle:
       "Fast peer-to-peer file sharing with encrypted WebRTC connections and automatic relay fallback when needed. No cloud storage, no account, completely private.",
+    metaDesc:
+      "Send big files online for free with fast, secure file sharing. Transfer large files without registration, software installation, or complicated steps.",
     sendFiles: "Send Files",
     receiveFiles: "Receive Files",
     trustE2e: "End-to-end encrypted",

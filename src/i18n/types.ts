@@ -112,6 +112,7 @@ export interface Dictionary {
     titleHighlight: string;
     titlePost: string;
     subtitle: string;
+    metaDesc?: string;
     sendFiles: string;
     receiveFiles: string;
     trustE2e: string;

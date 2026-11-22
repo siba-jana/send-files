@@ -44,7 +44,7 @@ function StructuredData({ locale }: { locale: Locale }) {
         name: `${SITE_NAME} — Files Transfer Online`,
         alternateName: "ilovedoc.org",
         url: `${SITE_URL}/${locale}/files-transfer-online`,
-        description: dict.hero.subtitle,
+        description: dict.hero.metaDesc || dict.hero.subtitle,
         applicationCategory: "UtilityApplication",
         applicationSubCategory: "File Transfer Tool",
         operatingSystem: "Any (web browser)",
@@ -71,7 +71,7 @@ function StructuredData({ locale }: { locale: Locale }) {
         "@id": `${SITE_URL}/${locale}/files-transfer-online#website`,
         name: SITE_NAME,
         url: `${SITE_URL}/${locale}/files-transfer-online`,
-        description: dict.hero.subtitle,
+        description: dict.hero.metaDesc || dict.hero.subtitle,
         publisher: {
           "@id": `${SITE_URL}/${locale}/files-transfer-online#webapp`,
         },
@@ -132,9 +132,11 @@ export async function generateMetadata({
     languagesRecord[item.code] = `${SITE_URL}/${item.code}/files-transfer-online`;
   }
 
+  const pageDescription = dict.hero.metaDesc || dict.hero.subtitle;
+
   return {
     title: `${SITE_NAME} — Files Transfer Online | ${dict.hero.titlePre}${dict.hero.titleHighlight}`,
-    description: dict.hero.subtitle,
+    description: pageDescription,
     keywords: [
       "files transfer online",
       "file transfer online",
@@ -150,7 +152,7 @@ export async function generateMetadata({
     },
     openGraph: {
       title: `${SITE_NAME} — Files Transfer Online`,
-      description: dict.hero.subtitle,
+      description: pageDescription,
       url: `${SITE_URL}/${validLocale}/files-transfer-online`,
       siteName: SITE_NAME,
       locale: validLocale,
@@ -167,7 +169,7 @@ export async function generateMetadata({
     twitter: {
       card: "summary_large_image",
       title: `${SITE_NAME} — Files Transfer Online`,
-      description: dict.hero.subtitle,
+      description: pageDescription,
       images: ["/og-image.jpg"],
     },
   };

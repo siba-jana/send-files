@@ -35,6 +35,8 @@ export const de: Dictionary = {
     titlePost: " versenden",
     subtitle:
       "Schneller Peer-to-Peer-Dateiversand über verschlüsselte WebRTC-Verbindungen mit automatischem Relay-Fallback bei Bedarf. Keine Cloud, kein Konto, völlig privat.",
+    metaDesc:
+      "Große Dateien kostenlos online senden mit schneller, sicherer Dateiübertragung. Übertragen Sie große Dateien ohne Registrierung, ohne Softwareinstallation und ohne komplizierte Schritte.",
     sendFiles: "Dateien senden",
     receiveFiles: "Dateien empfangen",
     trustE2e: "Ende-zu-Ende verschlüsselt",
