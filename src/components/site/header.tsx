@@ -16,16 +16,15 @@ export function SiteHeader() {
   const pathname = usePathname()
   const router = useRouter()
 
-  const isToolPage = pathname.includes("/files-transfer-online")
+  const isToolPage =
+    pathname.includes("/files-transfer-online") ||
+    pathname === `/${locale}` ||
+    pathname === "/"
   const toolUrl = `/${locale}/files-transfer-online`
   const chatGptPdfUrl = `/${locale}/chatgpt-to-pdf`
 
   const navLinks = [
-    { href: isToolPage ? "#top" : toolUrl, label: t("header.send") },
     { href: chatGptPdfUrl, label: "ChatGPT to PDF", isHighlight: true },
-    { href: "#how-it-works", label: t("header.howItWorks") },
-    { href: "#security", label: t("header.security") },
-    { href: "#faq", label: t("header.faq") },
   ]
 
   const handleStartTransfer = (mode: "send" | "receive") => {
