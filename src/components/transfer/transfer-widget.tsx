@@ -39,7 +39,7 @@ export function TransferWidget({ className }: TransferWidgetProps) {
   const [mode, setMode] = useState<TransferMode>("send");
   const receiveApiRef = useRef<ReceiveControllerApi | null>(null);
   const didInitRef = useRef(false);
-  const { t } = useI18n();
+  const { t, isRTL } = useI18n();
 
   const registerReceiveController = useCallback(
     (api: ReceiveControllerApi) => {
@@ -106,12 +106,14 @@ export function TransferWidget({ className }: TransferWidgetProps) {
           onValueChange={(value) => setMode(value === "receive" ? "receive" : "send")}
           className="gap-6"
         >
-          <TabsList className="relative grid h-13 w-full grid-cols-2 rounded-xl">
+          <TabsList className="relative grid h-13 w-full grid-cols-2 rounded-xl p-1">
             <span
               aria-hidden="true"
-              className={`pointer-events-none absolute inset-y-1 left-1 z-0 w-[calc(50%_-_0.25rem)] rounded-lg bg-background shadow-sm ring-1 ring-black/[0.04] transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-input/30 dark:ring-white/[0.06] dark:shadow-none ${
+              className={`pointer-events-none absolute inset-y-1 start-1 z-0 w-[calc(50%-0.25rem)] rounded-lg bg-background shadow-sm ring-1 ring-black/[0.04] transition-transform duration-300 ease-out motion-reduce:transition-none dark:bg-input/30 dark:ring-white/[0.06] dark:shadow-none ${
                 mode === "receive"
-                  ? "translate-x-[calc(50%_-_0.25rem)]"
+                  ? isRTL
+                    ? "-translate-x-full"
+                    : "translate-x-full"
                   : "translate-x-0"
               }`}
             />
