@@ -30,9 +30,9 @@ export const ar: Dictionary = {
   },
   hero: {
     badge: "بدون تخزين سحابي دائم",
-    titlePre: "أرسل الملفات مباشرة من ",
-    titleHighlight: "متصفح إلى متصفح",
-    titlePost: " بأمان.",
+    titlePre: "إرسال ملفات كبيرة ",
+    titleHighlight: "أونلاين مجاناً",
+    titlePost: "",
     subtitle:
       "مشاركة سريعة ومباشرة للملفات بين الأجهزة عبر اتصالات WebRTC مشفرة مع تحويل تلقائي عند الحاجة. بدون سحابة، بدون حساب، بخصوصية تامة.",
     sendFiles: "إرسال الملفات",

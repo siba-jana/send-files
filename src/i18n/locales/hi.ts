@@ -30,9 +30,9 @@ export const hi: Dictionary = {
   },
   hero: {
     badge: "क्लाउड पर कोई स्थायी स्टोरेज नहीं",
-    titlePre: "फ़ाइलें सीधे ",
-    titleHighlight: "ब्राउज़र से ब्राउज़र",
-    titlePost: " में भेजें।",
+    titlePre: "बड़ी फ़ाइलें ऑनलाइन ",
+    titleHighlight: "मुफ़्त भेजें",
+    titlePost: "",
     subtitle:
       "एन्क्रिप्टेड WebRTC कनेक्शन और स्वचालित रिले के साथ तेज़ पीयर-टू-पीयर फ़ाइल शेयरिंग। बिना क्लाउड, बिना खाता, पूरी तरह से निजी।",
     sendFiles: "फ़ाइलें भेजें",

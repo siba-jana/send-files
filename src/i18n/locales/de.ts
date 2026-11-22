@@ -30,9 +30,9 @@ export const de: Dictionary = {
   },
   hero: {
     badge: "Keine dauerhafte Cloud-Speicherung",
-    titlePre: "Dateien direkt von ",
-    titleHighlight: "Browser zu Browser",
-    titlePost: " senden.",
+    titlePre: "Große Dateien ",
+    titleHighlight: "online kostenlos",
+    titlePost: " versenden",
     subtitle:
       "Schneller Peer-to-Peer-Dateiversand über verschlüsselte WebRTC-Verbindungen mit automatischem Relay-Fallback bei Bedarf. Keine Cloud, kein Konto, völlig privat.",
     sendFiles: "Dateien senden",

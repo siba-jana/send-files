@@ -30,9 +30,9 @@ export const ja: Dictionary = {
   },
   hero: {
     badge: "永続的なクラウド保存なし",
-    titlePre: "ブラウザから",
-    titleHighlight: "ブラウザへ直接",
-    titlePost: "ファイル送信。",
+    titlePre: "大容量ファイルを",
+    titleHighlight: "オンラインで無料送信",
+    titlePost: "",
     subtitle:
       "暗号化されたWebRTC接続による高速ピアツーピア(P2P)ファイル共有。クラウドストレージ不要、アカウント不要で完全プライベート。",
     sendFiles: "ファイルを送信",

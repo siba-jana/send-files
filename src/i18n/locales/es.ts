@@ -30,9 +30,9 @@ export const es: Dictionary = {
   },
   hero: {
     badge: "Sin almacenamiento permanente en la nube",
-    titlePre: "Envía archivos directamente de ",
-    titleHighlight: "navegador a navegador",
-    titlePost: ".",
+    titlePre: "Envía archivos grandes ",
+    titleHighlight: "online gratis",
+    titlePost: "",
     subtitle:
       "Transferencia de archivos rápida punto a punto con conexiones WebRTC cifradas y retransmisión automática cuando sea necesario. Sin nube, sin cuenta, completamente privado.",
     sendFiles: "Enviar archivos",

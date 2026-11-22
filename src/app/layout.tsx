@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     canonical: "/",
   },
   title: {
-    default: "ilovedoc.org — Send Files Directly From Browser to Browser",
+    default: "ilovedoc.org — Send Big Files Online Free",
     template: "%s · ilovedoc.org",
   },
   description:
@@ -45,7 +45,7 @@ export const metadata: Metadata = {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
   },
   openGraph: {
-    title: "ilovedoc.org — Send Files Directly From Browser to Browser",
+    title: "ilovedoc.org — Send Big Files Online Free",
     description:
       "Files transfer directly between browsers over encrypted WebRTC. No permanent cloud storage. No complicated setup.",
     url: SITE_URL,
@@ -63,7 +63,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    title: "ilovedoc.org — Send Files Directly From Browser to Browser",
+    title: "ilovedoc.org — Send Big Files Online Free",
     description:
       "Fast peer-to-peer file sharing with encrypted WebRTC connections and automatic relay fallback when needed.",
     images: ["/og-image.jpg"],

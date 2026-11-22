@@ -30,9 +30,9 @@ export const en: Dictionary = {
   },
   hero: {
     badge: "No permanent cloud storage",
-    titlePre: "Send files directly from ",
-    titleHighlight: "browser to browser",
-    titlePost: ".",
+    titlePre: "Send Big Files ",
+    titleHighlight: "Online Free",
+    titlePost: "",
     subtitle:
       "Fast peer-to-peer file sharing with encrypted WebRTC connections and automatic relay fallback when needed. No cloud storage, no account, completely private.",
     sendFiles: "Send Files",

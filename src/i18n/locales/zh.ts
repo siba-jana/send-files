@@ -30,9 +30,9 @@ export const zh: Dictionary = {
   },
   hero: {
     badge: "零永久云端存储",
-    titlePre: "文件直接从 ",
-    titleHighlight: "浏览器直连浏览器",
-    titlePost: " 传输。",
+    titlePre: "在线免费发送",
+    titleHighlight: "大文件",
+    titlePost: "",
     subtitle:
       "高速点对点 (P2P) 文件传输，采用端到端加密 WebRTC 连接并在需要时自动中继。无云端存储，无需注册，保护隐私。",
     sendFiles: "发送文件",
