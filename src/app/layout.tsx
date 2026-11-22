@@ -1,8 +1,8 @@
 import type { Metadata, Viewport } from "next";
-import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { I18nProvider } from "@/i18n/context";
+import { BootstrapScript } from "@/components/site/bootstrap-script";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -84,17 +84,6 @@ export const viewport: Viewport = {
   ],
 };
 
-/**
- * Apply the persisted theme before first paint to avoid a flash of the wrong
- * scheme (mirrors the header toggle: `.dark` class + localStorage "theme").
- */
-const themeBootstrap = `(function(){try{var t=localStorage.getItem("theme");var d=t==="dark"||(!t&&window.matchMedia("(prefers-color-scheme: dark)").matches);if(d)document.documentElement.classList.add("dark");}catch(e){}})();`;
-
-/**
- * Apply the persisted or detected locale and direction before first paint.
- */
-const localeBootstrap = `(function(){try{var s=["en","es","fr","de","zh","ja","hi","pt","ar","ru"];var p=window.location.pathname.split("/")[1];var l=(p&&s.indexOf(p)!==-1)?p:null;if(!l){l=localStorage.getItem("ilovedoc_locale");}if(!l){var m=document.cookie.match(/(?:^|; )NEXT_LOCALE=([^;]*)/);if(m&&s.indexOf(m[1])!==-1)l=m[1];}if(!l&&navigator.language){var c=navigator.language.slice(0,2).toLowerCase();if(s.indexOf(c)!==-1)l=c;}if(l){document.documentElement.lang=l;document.documentElement.dir=(l==="ar")?"rtl":"ltr";}}catch(e){}})();`;
-
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -105,16 +94,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
-        <Script
-          id="theme-bootstrap"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: themeBootstrap }}
-        />
-        <Script
-          id="locale-bootstrap"
-          strategy="beforeInteractive"
-          dangerouslySetInnerHTML={{ __html: localeBootstrap }}
-        />
+        <BootstrapScript />
         <I18nProvider>{children}</I18nProvider>
       </body>
     </html>

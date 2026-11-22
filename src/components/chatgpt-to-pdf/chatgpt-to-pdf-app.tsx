@@ -55,19 +55,9 @@ export function ChatGptToPdfApp() {
   const previewRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Draft content state
-  const [data, setData] = useState<DocumentData>(() => {
-    if (typeof window !== "undefined") {
-      try {
-        const saved = localStorage.getItem(STORAGE_DRAFT_KEY);
-        if (saved) return JSON.parse(saved);
-      } catch {
-        // fallback
-      }
-    }
-    return {
-      content: CHATGPT_SAMPLES[0].content,
-    };
+  // Draft content state - initialized with default sample so server and client match during hydration
+  const [data, setData] = useState<DocumentData>({
+    content: CHATGPT_SAMPLES[0].content,
   });
 
   const [settings, setSettings] = useState<DocumentSettings>(DEFAULT_SETTINGS);
@@ -78,15 +68,33 @@ export function ChatGptToPdfApp() {
   const [fileName, setFileName] = useState("chatgpt-conversation.pdf");
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [isHydrated, setIsHydrated] = useState(false);
 
-  // Auto-save draft
+  // Restore saved draft on mount (client-side only after initial hydration)
   useEffect(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed?.content) {
+          setData(parsed);
+        }
+      }
+    } catch {
+      // storage quota or disabled
+    }
+    setIsHydrated(true);
+  }, []);
+
+  // Auto-save draft only after hydration is complete to prevent overwriting saved drafts
+  useEffect(() => {
+    if (!isHydrated) return;
     try {
       localStorage.setItem(STORAGE_DRAFT_KEY, JSON.stringify(data));
     } catch {
       // storage quota
     }
-  }, [data]);
+  }, [data, isHydrated]);
 
   // Keep currentPage valid within totalPages
   useEffect(() => {

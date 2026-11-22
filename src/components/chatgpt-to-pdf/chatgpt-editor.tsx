@@ -46,6 +46,14 @@ export function ChatGptEditor({
   const [history, setHistory] = useState<string[]>([data.content]);
   const [historyIndex, setHistoryIndex] = useState<number>(0);
 
+  // Sync initial history when saved draft loads on client
+  useEffect(() => {
+    if (history.length <= 1 && history[0] !== data.content) {
+      setHistory([data.content]);
+      setHistoryIndex(0);
+    }
+  }, [data.content]);
+
   const updateContent = (content: string, pushHistory = true) => {
     onChange({ content });
     if (pushHistory && content !== history[historyIndex]) {
