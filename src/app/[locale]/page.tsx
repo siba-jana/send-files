@@ -4,8 +4,6 @@ import { SiteHeader } from "@/components/site/header";
 import { HubHero } from "@/components/site/hub-hero";
 import { ToolsGrid } from "@/components/site/tools-grid";
 import { StatsStrip } from "@/components/site/stats-strip";
-import { HowItWorks } from "@/components/site/how-it-works";
-import { SecuritySection } from "@/components/site/security-section";
 import { Faq, HUB_FAQS } from "@/components/site/faq";
 import { Footer } from "@/components/site/footer";
 import { AdminApp } from "@/components/admin/admin-app";
@@ -205,8 +203,6 @@ export default async function LocalizedHome({
           <HubHero />
           <ToolsGrid />
           <StatsStrip />
-          <HowItWorks />
-          <SecuritySection />
           <Faq
             items={dict.hub?.faqItems || HUB_FAQS}
             heading={dict.hub?.faqHeading || dict.faq?.heading}

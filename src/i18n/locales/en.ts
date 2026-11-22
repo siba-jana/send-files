@@ -245,13 +245,13 @@ export const en: Dictionary = {
     settingsDesc: "Customize themes, paper size, and page margins.",
   },
   hub: {
-    badge: "Free Online Document & File Suite",
-    titlePre: "Free Online Tools for ",
-    titleHighlight: "Documents & Files",
+    badge: "Free Online Tools Suite",
+    titlePre: "Free ",
+    titleHighlight: "Online Tools",
     titlePost: "",
     subtitle:
       "Every tool you need to send large files and convert documents in one place. 100% free, browser-based, with zero permanent cloud storage.",
-    metaTitle: "Free Online Document & File Tools",
+    metaTitle: "Free Online Tools",
     metaDesc:
       "Free, privacy-first web tools for documents and files. Send big files directly peer-to-peer and convert ChatGPT text to PDF with zero cloud storage.",
     toolsTitle: "Explore All Tools",

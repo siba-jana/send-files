@@ -236,13 +236,13 @@ export const ja: Dictionary = {
     settingsDesc: "テーマ、用紙サイズ、余白をカスタマイズ。",
   },
   hub: {
-    badge: "無料オンライン文書・大容量ファイルツール集",
-    titlePre: "文書と大容量ファイルのための ",
-    titleHighlight: "無料オンラインツール",
+    badge: "無料オンラインツール集",
+    titlePre: "無料 ",
+    titleHighlight: "オンラインツール",
     titlePost: "",
     subtitle:
       "大容量ファイルの直接送信から文書の変換まで、すべてを1か所で。完全無料、ブラウザ完結、クラウド保存一切なし。",
-    metaTitle: "文書と大容量ファイルのための無料オンラインツール",
+    metaTitle: "無料オンラインツール",
     metaDesc:
       "プライバシー重視の無料オンライン文書・ファイル共有ツール。暗号化P2Pで大容量ファイルを直接送受信し、ChatGPTテキストを瞬時にPDF変換。",
     toolsTitle: "全ツール一覧",

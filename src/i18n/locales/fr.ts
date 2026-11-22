@@ -245,13 +245,13 @@ export const fr: Dictionary = {
     settingsDesc: "Personnalisez les thèmes, le format de page et les marges.",
   },
   hub: {
-    badge: "Suite d'outils gratuits pour documents et fichiers",
-    titlePre: "Outils en ligne gratuits pour ",
-    titleHighlight: "documents et fichiers",
+    badge: "Suite d'outils en ligne gratuits",
+    titlePre: "Outils en ligne ",
+    titleHighlight: "gratuits",
     titlePost: "",
     subtitle:
       "Tous les outils dont vous avez besoin pour envoyer de gros fichiers et convertir vos documents en un seul endroit. 100% gratuit, dans le navigateur et sans stockage permanent dans le cloud.",
-    metaTitle: "Outils en ligne gratuits pour documents et fichiers",
+    metaTitle: "Outils en ligne gratuits",
     metaDesc:
       "Outils web gratuits et respectueux de la vie privée. Envoyez de gros fichiers directement en P2P et convertissez le texte ChatGPT en PDF sans stockage cloud.",
     toolsTitle: "Découvrez tous nos outils",

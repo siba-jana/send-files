@@ -237,13 +237,13 @@ export const zh: Dictionary = {
     settingsDesc: "自定义主题、纸张尺寸和页面边距。",
   },
   hub: {
-    badge: "免费在线文档与大文件工具套件",
-    titlePre: "免费在线 ",
-    titleHighlight: "文档与大文件处理工具",
+    badge: "免费在线工具套件",
+    titlePre: "免费 ",
+    titleHighlight: "在线工具",
     titlePost: "",
     subtitle:
       "集超大文件直传与专业文档转换于一体的在线工具套件。100% 免费，浏览器端直连运行，零永久云端存储。",
-    metaTitle: "免费在线文档与大文件处理工具",
+    metaTitle: "免费在线工具",
     metaDesc:
       "免费、隐私保护的文档与文件在线工具。通过加密 P2P 高速发送大文件，将 ChatGPT 对话轻松转为精美 PDF，无云端存储。",
     toolsTitle: "浏览全部工具",

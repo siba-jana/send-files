@@ -245,13 +245,13 @@ export const de: Dictionary = {
     settingsDesc: "Designs, Papierformat und Ränder anpassen.",
   },
   hub: {
-    badge: "Kostenlose Suite für Dokumente und Dateien",
-    titlePre: "Kostenlose Online-Tools für ",
-    titleHighlight: "Dokumente & Dateien",
+    badge: "Kostenlose Online-Tools Suite",
+    titlePre: "Kostenlose ",
+    titleHighlight: "Online-Tools",
     titlePost: "",
     subtitle:
       "Alle Werkzeuge, die Sie zum Versenden großer Dateien und Konvertieren von Dokumenten benötigen, an einem Ort. 100% kostenlos, im Browser und ohne dauerhafte Cloud-Speicherung.",
-    metaTitle: "Kostenlose Online-Tools für Dokumente & Dateien",
+    metaTitle: "Kostenlose Online-Tools",
     metaDesc:
       "Kostenlose, datenschutzfreundliche Web-Tools für Dokumente und Dateien. Große Dateien direkt per P2P versenden und ChatGPT-Texte in PDF umwandeln ohne Cloud-Speicher.",
     toolsTitle: "Alle Tools entdecken",

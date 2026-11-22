@@ -245,13 +245,13 @@ export const es: Dictionary = {
     settingsDesc: "Personaliza temas, tamaño de papel y márgenes.",
   },
   hub: {
-    badge: "Suite de herramientas gratuitas para documentos y archivos",
-    titlePre: "Herramientas online gratuitas para ",
-    titleHighlight: "documentos y archivos",
+    badge: "Suite de herramientas online gratuitas",
+    titlePre: "Herramientas online ",
+    titleHighlight: "gratuitas",
     titlePost: "",
     subtitle:
       "Todas las herramientas que necesitas para enviar archivos grandes y convertir documentos en un solo lugar. 100% gratis, en el navegador y sin almacenamiento permanente en la nube.",
-    metaTitle: "Herramientas online gratuitas para documentos y archivos",
+    metaTitle: "Herramientas online gratuitas",
     metaDesc:
       "Herramientas web gratuitas y privadas para documentos y archivos. Envía archivos grandes P2P directamente y convierte texto de ChatGPT a PDF sin almacenamiento en la nube.",
     toolsTitle: "Explora todas las herramientas",

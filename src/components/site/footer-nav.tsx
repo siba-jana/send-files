@@ -9,10 +9,8 @@ const linkClass =
 export function FooterNav() {
   const pathname = usePathname()
   const { locale, t } = useI18n()
-  const onHome =
-    pathname === "/" ||
-    /^\/[a-z]{2}(\/)?$/.test(pathname) ||
-    /^\/[a-z]{2}\/files-transfer-online(\/)?$/.test(pathname)
+  const onTool = /^\/[a-z]{2}\/files-transfer-online(\/)?$/.test(pathname)
+  const onHome = pathname === "/" || /^\/[a-z]{2}(\/)?$/.test(pathname)
 
   const toolUrl = `/${locale}/files-transfer-online`
   const chatGptPdfUrl = `/${locale}/chatgpt-to-pdf`
@@ -37,12 +35,16 @@ export function FooterNav() {
       <div className="flex flex-col gap-x-1 gap-y-1 md:flex-row md:items-center">
         <ul className="flex flex-wrap items-center gap-x-1 gap-y-1">
           {mainLinks.map((link) => {
-            const href =
-              link.kind === "route"
-                ? link.href
-                : onHome
-                  ? `#${link.anchor}`
-                  : `/#${link.anchor}`
+            let href: string
+            if (link.kind === "route") {
+              href = link.href
+            } else if (link.anchor === "security") {
+              href = onTool ? "#security" : `${toolUrl}#security`
+            } else if (onHome || onTool) {
+              href = `#${link.anchor}`
+            } else {
+              href = `/${locale}#${link.anchor}`
+            }
             return (
               <li key={link.label}>
                 <a href={href} className={linkClass}>
