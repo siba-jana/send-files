@@ -36,7 +36,7 @@ export const fr: Dictionary = {
     subtitle:
       "Partage rapide de pair à pair via des connexions WebRTC chiffrées et relais automatique si nécessaire. Sans cloud, sans compte, totalement privé.",
     metaDesc:
-      "Envoyez gratuitement des fichiers volumineux en ligne grâce à un partage rapide et sécurisé. Transférez de gros fichiers sans inscription, sans installation de logiciel ni étapes compliquées.",
+      "Envoyez gratuitement des fichiers volumineux en ligne, rapidement et en toute sécurité. Sans inscription, sans logiciel à installer et sans étapes compliquées.",
     sendFiles: "Envoyer des fichiers",
     receiveFiles: "Recevoir des fichiers",
     trustE2e: "Chiffrement de bout en bout",

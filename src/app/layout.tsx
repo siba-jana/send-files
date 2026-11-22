@@ -28,7 +28,7 @@ export const metadata: Metadata = {
     template: "%s · ilovedoc.org",
   },
   description:
-    "Send big files online for free with fast, secure file sharing. Transfer large files without registration, software installation, or complicated steps.",
+    "Send big files online for free with fast, secure file sharing. Transfer large files without signing up, installing software, or dealing with complicated steps.",
   keywords: [
     "file transfer",
     "peer to peer file sharing",

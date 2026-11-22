@@ -36,7 +36,7 @@ export const es: Dictionary = {
     subtitle:
       "Transferencia de archivos rápida punto a punto con conexiones WebRTC cifradas y retransmisión automática cuando sea necesario. Sin nube, sin cuenta, completamente privado.",
     metaDesc:
-      "Envía archivos grandes en línea gratis con una transferencia de archivos rápida y segura. Transfiere archivos pesados sin registro, sin instalar programas y sin pasos complicados.",
+      "Envía archivos grandes online gratis de forma rápida y segura. Comparte archivos sin registrarte, instalar programas ni seguir pasos complicados.",
     sendFiles: "Enviar archivos",
     receiveFiles: "Recibir archivos",
     trustE2e: "Cifrado de extremo a extremo",
