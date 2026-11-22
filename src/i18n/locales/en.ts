@@ -244,5 +244,74 @@ export const en: Dictionary = {
     settingsTitle: "Document & PDF Settings",
     settingsDesc: "Customize themes, paper size, and page margins.",
   },
+  hub: {
+    badge: "Free Online Document & File Suite",
+    titlePre: "Free Online Tools for ",
+    titleHighlight: "Documents & Files",
+    titlePost: "",
+    subtitle:
+      "Every tool you need to send large files and convert documents in one place. 100% free, browser-based, with zero permanent cloud storage.",
+    metaTitle: "Free Online Document & File Tools",
+    metaDesc:
+      "Free, privacy-first web tools for documents and files. Send big files directly peer-to-peer and convert ChatGPT text to PDF with zero cloud storage.",
+    toolsTitle: "Explore All Tools",
+    toolsSubtitle:
+      "Fast, secure, and privacy-first web utilities designed for seamless workflows.",
+    transferCardTitle: "Send Big Files Online",
+    transferCardDesc:
+      "Transfer large files of any size directly peer-to-peer with encrypted WebRTC. No file size limits, no storage, no account required.",
+    transferCardBadge: "Direct P2P",
+    transferCardCta: "Open File Transfer",
+    transferFeat1: "Direct browser-to-browser P2P",
+    transferFeat2: "No file size limits",
+    transferFeat3: "End-to-end WebRTC encryption",
+    transferFeat4: "Zero cloud storage",
+    chatGptCardTitle: "ChatGPT to PDF Converter",
+    chatGptCardDesc:
+      "Convert ChatGPT conversations, prompts, code snippets, and markdown into beautifully formatted, print-ready PDF documents.",
+    chatGptCardBadge: "New",
+    chatGptCardCta: "Open Converter",
+    chatGptFeat1: "Auto-formats ChatGPT Markdown",
+    chatGptFeat2: "Syntax highlighting & LaTeX math",
+    chatGptFeat3: "High-DPI paginated PDF export",
+    chatGptFeat4: "100% Client-side privacy",
+    faqHeading: "Frequently asked questions",
+    faqSubheading:
+      "Common questions about the I Love Doc platform, privacy, and our free online document tools.",
+    faqItems: [
+      {
+        q: "What is I Love Doc?",
+        a: "I Love Doc is a suite of free, privacy-first web utilities for documents and files. We offer direct peer-to-peer large file sharing, ChatGPT conversation-to-PDF conversion, and more browser-native productivity tools designed with zero permanent cloud storage.",
+      },
+      {
+        q: "Are all tools on I Love Doc completely free?",
+        a: "Yes, 100% free. There are no paywalls, premium tiers, or hidden subscriptions. You get unlimited access to send files and convert documents directly in your browser.",
+      },
+      {
+        q: "Do I need an account or sign-in?",
+        a: "No. We believe in total friction-free utility and privacy. You never need an account, email address, phone number, or profile to use any tool on ilovedoc.org.",
+      },
+      {
+        q: "How does I Love Doc protect my privacy and files?",
+        a: "Unlike traditional web services that upload your files to centralized cloud servers, I Love Doc operates on a privacy-first model: files transferred with our P2P tool stream directly between devices over encrypted WebRTC, and documents converted with our ChatGPT to PDF tool are processed 100% locally in your browser. Your confidential data never lingers on our servers.",
+      },
+      {
+        q: "Which tools are currently available on I Love Doc?",
+        a: "Currently, I Love Doc offers 'Send Big Files Online' (unlimited-size peer-to-peer file transfer) and 'ChatGPT to PDF Converter' (instant formatting and high-DPI PDF generation for AI conversations, code, and math). Additional document utilities are continuously being developed.",
+      },
+      {
+        q: "Are there any limits on file size or usage?",
+        a: "No artificial limits. Because transfers are peer-to-peer, you can send files of any size directly from your browser. You can also convert as many documents as you need without daily quotas.",
+      },
+      {
+        q: "Which devices and browsers work with I Love Doc?",
+        a: "I Love Doc works seamlessly on any modern web browser — including Google Chrome, Mozilla Firefox, Apple Safari, Microsoft Edge, and Opera — across Windows, macOS, Linux, iOS, and Android.",
+      },
+      {
+        q: "Are my transferred files or converted PDFs saved anywhere?",
+        a: "No. We have a strict zero-storage philosophy. Converted PDFs exist only in your browser's temporary memory, and file transfers stream ephemeral bytes directly from sender to recipient.",
+      },
+    ],
+  },
 };
 

@@ -244,5 +244,74 @@ export const de: Dictionary = {
     settingsTitle: "Dokument- & PDF-Einstellungen",
     settingsDesc: "Designs, Papierformat und Ränder anpassen.",
   },
+  hub: {
+    badge: "Kostenlose Suite für Dokumente und Dateien",
+    titlePre: "Kostenlose Online-Tools für ",
+    titleHighlight: "Dokumente & Dateien",
+    titlePost: "",
+    subtitle:
+      "Alle Werkzeuge, die Sie zum Versenden großer Dateien und Konvertieren von Dokumenten benötigen, an einem Ort. 100% kostenlos, im Browser und ohne dauerhafte Cloud-Speicherung.",
+    metaTitle: "Kostenlose Online-Tools für Dokumente & Dateien",
+    metaDesc:
+      "Kostenlose, datenschutzfreundliche Web-Tools für Dokumente und Dateien. Große Dateien direkt per P2P versenden und ChatGPT-Texte in PDF umwandeln ohne Cloud-Speicher.",
+    toolsTitle: "Alle Tools entdecken",
+    toolsSubtitle:
+      "Schnelle, sichere und private Web-Dienstprogramme für effiziente Workflows.",
+    transferCardTitle: "Große Dateien online versenden",
+    transferCardDesc:
+      "Dateien jeder Größe direkt von Browser zu Browser über verschlüsseltes WebRTC übertragen. Ohne Größenbeschränkung, ohne Speicher und ohne Registrierung.",
+    transferCardBadge: "Direktes P2P",
+    transferCardCta: "Dateiversand öffnen",
+    transferFeat1: "Direktes P2P von Browser zu Browser",
+    transferFeat2: "Keine Dateigrößenbegrenzung",
+    transferFeat3: "Ende-zu-Ende WebRTC-Verschlüsselung",
+    transferFeat4: "Null permanente Cloud-Speicherung",
+    chatGptCardTitle: "ChatGPT zu PDF Konverter",
+    chatGptCardDesc:
+      "Konvertieren Sie ChatGPT-Konversationen, Prompts, Code und Markdown in sauber formatierte, druckfertige PDF-Dokumente.",
+    chatGptCardBadge: "Neu",
+    chatGptCardCta: "Konverter öffnen",
+    chatGptFeat1: "Automatische Formatierung von ChatGPT-Markdown",
+    chatGptFeat2: "Syntax-Highlighting und LaTeX-Formeln",
+    chatGptFeat3: "Hochauflösender paginierter PDF-Export",
+    chatGptFeat4: "100% Privatsphäre auf dem Client",
+    faqHeading: "Häufig gestellte Fragen",
+    faqSubheading:
+      "Wichtige Fragen zur I Love Doc Plattform, zum Datenschutz und zu unseren kostenlosen Online-Tools.",
+    faqItems: [
+      {
+        q: "Was ist I Love Doc?",
+        a: "I Love Doc ist eine Sammlung kostenloser, datenschutzfreundlicher Web-Tools für Dokumente und Dateien: direkter P2P-Dateiversand ohne Limit, Konvertierung von ChatGPT-Texten in PDF und mehr ohne dauerhafte Cloud-Speicherung.",
+      },
+      {
+        q: "Sind alle Tools auf I Love Doc kostenlos?",
+        a: "Ja, zu 100% kostenlos. Es gibt keine versteckten Abonnements oder Paywalls. Sie können unbegrenzt Dateien versenden und Dokumente im Browser konvertieren.",
+      },
+      {
+        q: "Benötige ich ein Konto oder eine Anmeldung?",
+        a: "Nein. Wir legen großen Wert auf einfache Nutzung und Privatsphäre. Sie müssen sich weder registrieren noch persönliche Daten angeben.",
+      },
+      {
+        q: "Wie schützt I Love Doc meine Privatsphäre und Dateien?",
+        a: "Im Gegensatz zu herkömmlichen Cloud-Diensten streamt unser P2P-Tool Dateien direkt verschlüsselt zwischen Ihren Geräten, und der PDF-Konverter läuft vollständig lokal in Ihrem Browser.",
+      },
+      {
+        q: "Welche Tools bietet I Love Doc derzeit an?",
+        a: "Aktuell bieten wir 'Große Dateien online versenden' (P2P-Transfer ohne Limit) sowie den 'ChatGPT zu PDF Konverter' an. Weitere Tools sind in Vorbereitung.",
+      },
+      {
+        q: "Gibt es Limits für Dateigröße oder Nutzung?",
+        a: "Nein, keine künstlichen Limits. Da die Übertragung direkt von Gerät zu Gerät stattfindet, können Sie beliebig große Dateien ohne tägliche Quoten übertragen.",
+      },
+      {
+        q: "Welche Geräte und Browser werden unterstützt?",
+        a: "I Love Doc funktioniert auf allen modernen Browsern (Chrome, Firefox, Safari, Edge, Opera) unter Windows, macOS, Linux, iOS und Android.",
+      },
+      {
+        q: "Werden meine Dateien oder PDFs gespeichert?",
+        a: "Nein. Wir verfolgen eine strikte Zero-Storage-Philosophie. Dokumente verbleiben ausschließlich im flüchtigen Browserspeicher.",
+      },
+    ],
+  },
 };
 

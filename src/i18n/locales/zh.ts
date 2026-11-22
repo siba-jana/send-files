@@ -236,5 +236,74 @@ export const zh: Dictionary = {
     settingsTitle: "文档与 PDF 设置",
     settingsDesc: "自定义主题、纸张尺寸和页面边距。",
   },
+  hub: {
+    badge: "免费在线文档与大文件工具套件",
+    titlePre: "免费在线 ",
+    titleHighlight: "文档与大文件处理工具",
+    titlePost: "",
+    subtitle:
+      "集超大文件直传与专业文档转换于一体的在线工具套件。100% 免费，浏览器端直连运行，零永久云端存储。",
+    metaTitle: "免费在线文档与大文件处理工具",
+    metaDesc:
+      "免费、隐私保护的文档与文件在线工具。通过加密 P2P 高速发送大文件，将 ChatGPT 对话轻松转为精美 PDF，无云端存储。",
+    toolsTitle: "浏览全部工具",
+    toolsSubtitle:
+      "为高效办公打造的高速、安全、隐私优先的现代化浏览器在线工具。",
+    transferCardTitle: "在线免费发送大文件",
+    transferCardDesc:
+      "基于 WebRTC 点对点直传任意大小的文件，端到端加密传输。无文件大小限制，无需云端上传，无需注册账号。",
+    transferCardBadge: "P2P 直连",
+    transferCardCta: "打开文件直传",
+    transferFeat1: "浏览器与浏览器直接 P2P 传输",
+    transferFeat2: "不限制文件大小",
+    transferFeat3: "端到端 WebRTC 加密",
+    transferFeat4: "零永久云端存储",
+    chatGptCardTitle: "ChatGPT 转 PDF 工具",
+    chatGptCardDesc:
+      "将 ChatGPT 对话记录、提示词、代码片段及 Markdown 文档快速转换为排版精美、可直接打印的高清 PDF。",
+    chatGptCardBadge: "全新上线",
+    chatGptCardCta: "打开转换工具",
+    chatGptFeat1: "自动排版 ChatGPT Markdown",
+    chatGptFeat2: "代码高亮及 LaTeX 数学公式渲染",
+    chatGptFeat3: "高清分页排版与即时下载",
+    chatGptFeat4: "100% 浏览器客户端离线级隐私",
+    faqHeading: "常见问题解答",
+    faqSubheading:
+      "了解关于 I Love Doc 平台、数据隐私以及免费在线工具的常见疑问。",
+    faqItems: [
+      {
+        q: "什么是 I Love Doc？",
+        a: "I Love Doc 是一个免费、保护隐私的在线文档与文件工具套件，提供点对点超大文件传输、ChatGPT 转 PDF 等多项免云端存储的浏览器原生实用工具。",
+      },
+      {
+        q: "I Love Doc 的工具完全免费吗？",
+        a: "是的，100% 完全免费。没有隐藏收费、付费解锁或订阅墙，您可以无限制使用我们提供的各项工具。",
+      },
+      {
+        q: "使用需要注册账号或登录吗？",
+        a: "完全不需要。我们坚持极简与隐私保护原则，您无需提供邮箱或手机号即可直接打开使用。",
+      },
+      {
+        q: "I Love Doc 如何保障我的文件隐私与安全？",
+        a: "与传统云盘不同，I Love Doc 文件直传采用 WebRTC 点对点加密，文件在两台设备间直通，不经过中央服务器；PDF 转换完全在本地浏览器内存中计算，绝不会上传保存您的数据。",
+      },
+      {
+        q: "目前提供了哪些工具？",
+        a: "目前上线了“在线免费发送大文件”（无上限 P2P 直传）以及“ChatGPT 转 PDF 工具”（专业排版与公式支持），更多文档工具正在持续开发中。",
+      },
+      {
+        q: "传输或文件大小有限制吗？",
+        a: "没有人工设定的文件大小上限。由于是两台设备直接建立传输通道，您可以传送几十甚至数百 GB 的大型文件，且没有每日配额限制。",
+      },
+      {
+        q: "支持哪些设备和浏览器？",
+        a: "支持主流操作系统（Windows、macOS、Linux、iOS、Android）上的所有现代化浏览器，包括 Chrome、Firefox、Safari、Edge、Opera 等。",
+      },
+      {
+        q: "我的文件或生成的 PDF 会保存在服务器上吗？",
+        a: "绝不会。我们坚持零服务器存储哲学，生成的 PDF 仅临时保留在您当前浏览器的内存中，刷新即消失。",
+      },
+    ],
+  },
 };
 

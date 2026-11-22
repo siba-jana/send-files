@@ -244,5 +244,74 @@ export const fr: Dictionary = {
     settingsTitle: "Paramètres du document & PDF",
     settingsDesc: "Personnalisez les thèmes, le format de page et les marges.",
   },
+  hub: {
+    badge: "Suite d'outils gratuits pour documents et fichiers",
+    titlePre: "Outils en ligne gratuits pour ",
+    titleHighlight: "documents et fichiers",
+    titlePost: "",
+    subtitle:
+      "Tous les outils dont vous avez besoin pour envoyer de gros fichiers et convertir vos documents en un seul endroit. 100% gratuit, dans le navigateur et sans stockage permanent dans le cloud.",
+    metaTitle: "Outils en ligne gratuits pour documents et fichiers",
+    metaDesc:
+      "Outils web gratuits et respectueux de la vie privée. Envoyez de gros fichiers directement en P2P et convertissez le texte ChatGPT en PDF sans stockage cloud.",
+    toolsTitle: "Découvrez tous nos outils",
+    toolsSubtitle:
+      "Des utilitaires web rapides, sécurisés et axés sur la confidentialité pour optimiser vos flux de travail.",
+    transferCardTitle: "Envoyer de gros fichiers en ligne",
+    transferCardDesc:
+      "Transférez des fichiers de toute taille directement de pair à pair via WebRTC chiffré. Sans limite de taille, sans stockage et sans inscription.",
+    transferCardBadge: "P2P direct",
+    transferCardCta: "Ouvrir le transfert de fichiers",
+    transferFeat1: "P2P direct entre navigateurs",
+    transferFeat2: "Aucune limite de taille de fichier",
+    transferFeat3: "Chiffrement WebRTC de bout en bout",
+    transferFeat4: "Zéro stockage cloud",
+    chatGptCardTitle: "Convertisseur ChatGPT en PDF",
+    chatGptCardDesc:
+      "Convertissez vos conversations, prompts, blocs de code et markdown ChatGPT en documents PDF soignés et prêts à l'impression.",
+    chatGptCardBadge: "Nouveau",
+    chatGptCardCta: "Ouvrir le convertisseur",
+    chatGptFeat1: "Formatage automatique du Markdown ChatGPT",
+    chatGptFeat2: "Coloration syntaxique et formules LaTeX",
+    chatGptFeat3: "Exportation PDF haute résolution avec pagination",
+    chatGptFeat4: "Confidentialité 100% côté client",
+    faqHeading: "Foire aux questions",
+    faqSubheading:
+      "Questions fréquentes sur la plateforme I Love Doc, la confidentialité et nos outils en ligne gratuits.",
+    faqItems: [
+      {
+        q: "Qu'est-ce que I Love Doc ?",
+        a: "I Love Doc est une suite d'outils web gratuits et privés pour vos documents et fichiers : transfert P2P direct de gros fichiers, conversion de conversations ChatGPT en PDF et bien plus encore, sans stockage cloud permanent.",
+      },
+      {
+        q: "Tous les outils sur I Love Doc sont-ils entièrement gratuits ?",
+        a: "Oui, 100% gratuits. Pas d'abonnement caché, pas de version payante. Vous avez un accès illimité à nos utilitaires directement dans votre navigateur.",
+      },
+      {
+        q: "Dois-je créer un compte ou me connecter ?",
+        a: "Non. Nous croyons en un service sans friction ni barrière. Aucun compte, email ou profil n'est requis pour utiliser nos outils.",
+      },
+      {
+        q: "Comment I Love Doc protège-t-il ma confidentialité et mes données ?",
+        a: "Contrairement aux plateformes classiques qui stockent vos fichiers sur des serveurs centraux, I Love Doc fonctionne de manière locale ou en P2P chiffré (WebRTC). Vos documents ne sont jamais conservés sur nos serveurs.",
+      },
+      {
+        q: "Quels outils sont actuellement proposés sur I Love Doc ?",
+        a: "Actuellement, nous proposons 'Envoyer de gros fichiers en ligne' (transfert P2P illimité) et le 'Convertisseur ChatGPT en PDF' (mise en page pro et formules mathématiques). D'autres outils arrivent bientôt.",
+      },
+      {
+        q: "Y a-t-il des limites de taille de fichier ou d'utilisation ?",
+        a: "Aucune limite artificielle. Comme le transfert se fait directement entre vos appareils, vous pouvez envoyer des fichiers de n'importe quel volume sans quota quotidien.",
+      },
+      {
+        q: "Quels appareils et navigateurs sont compatibles ?",
+        a: "I Love Doc fonctionne sur tous les navigateurs modernes (Chrome, Firefox, Safari, Edge, Opera) sous Windows, macOS, Linux, iOS et Android.",
+      },
+      {
+        q: "Mes fichiers transférés ou PDF générés sont-ils sauvegardés ?",
+        a: "Non. Nous appliquons une politique stricte de zéro stockage. Vos documents sont traités uniquement en mémoire volatile dans votre navigateur.",
+      },
+    ],
+  },
 };
 

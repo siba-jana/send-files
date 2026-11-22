@@ -16,23 +16,32 @@ export function SiteHeader() {
   const pathname = usePathname()
   const router = useRouter()
 
-  const isToolPage =
-    pathname.includes("/files-transfer-online") ||
-    pathname === `/${locale}` ||
-    pathname === "/"
-  const toolUrl = `/${locale}/files-transfer-online`
+  const isTransferPage = pathname.includes("/files-transfer-online")
+  const isChatGptPdf = pathname.includes("/chatgpt-to-pdf")
+  const homeUrl = `/${locale}`
+  const transferUrl = `/${locale}/files-transfer-online`
   const chatGptPdfUrl = `/${locale}/chatgpt-to-pdf`
 
   const navLinks = [
-    { href: chatGptPdfUrl, label: "ChatGPT to PDF", isHighlight: true },
+    {
+      href: transferUrl,
+      label: t("common.sendFiles") || "File Transfer",
+      isActive: isTransferPage,
+    },
+    {
+      href: chatGptPdfUrl,
+      label: "ChatGPT to PDF",
+      isHighlight: true,
+      isActive: isChatGptPdf,
+    },
   ]
 
   const handleStartTransfer = (mode: "send" | "receive") => {
     window.dispatchEvent(new CustomEvent("ilovedoc:mode", { detail: mode }))
-    if (isToolPage) {
+    if (isTransferPage) {
       window.scrollTo({ top: 0, behavior: "smooth" })
     } else {
-      router.push(toolUrl)
+      router.push(transferUrl)
     }
   }
 
@@ -50,7 +59,7 @@ export function SiteHeader() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/80 backdrop-blur-md">
       <div className="mx-auto flex h-16 w-full max-w-6xl items-center gap-2 px-4 sm:px-6 lg:px-8">
         <a
-          href={toolUrl}
+          href={homeUrl}
           aria-label="I Love Doc — home"
           className="inline-flex items-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
         >

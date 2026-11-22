@@ -1,26 +1,40 @@
-"use client"
+"use client";
 
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "@/components/ui/accordion"
-import { Reveal } from "@/components/site/reveal"
-import { useI18n } from "@/i18n/context"
-import { FAQS } from "./faq-data"
+} from "@/components/ui/accordion";
+import { Reveal } from "@/components/site/reveal";
+import { useI18n } from "@/i18n/context";
+import { FAQS, HUB_FAQS, type FaqItemData } from "./faq-data";
 
-export { FAQS }
+export { FAQS, HUB_FAQS };
 
-export function Faq() {
-  const { t, dict } = useI18n()
-  const faqItems = dict?.faq?.items && dict.faq.items.length > 0 ? dict.faq.items : FAQS
+export interface FaqProps {
+  items?: readonly FaqItemData[];
+  heading?: string;
+  subheading?: string;
+}
+
+export function Faq({ items, heading, subheading }: FaqProps = {}) {
+  const { t, dict } = useI18n();
+  const faqItems =
+    items && items.length > 0
+      ? items
+      : dict?.faq?.items && dict.faq.items.length > 0
+        ? dict.faq.items
+        : FAQS;
+
+  const displayHeading = heading || t("faq.heading");
+  const displaySubheading = subheading || t("faq.subheading");
 
   return (
     <section
       id="faq"
       aria-labelledby="faq-heading"
-      className="scroll-mt-24 py-20 md:py-28"
+      className="scroll-mt-24 py-16 sm:py-20 md:py-28"
     >
       <div className="mx-auto w-full max-w-3xl px-4 sm:px-6 lg:px-8">
         <Reveal className="text-center">
@@ -28,15 +42,15 @@ export function Faq() {
             id="faq-heading"
             className="text-balance text-3xl font-semibold tracking-tight sm:text-4xl"
           >
-            {t("faq.heading")}
+            {displayHeading}
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-pretty text-base text-muted-foreground sm:text-lg">
-            {t("faq.subheading")}
+            {displaySubheading}
           </p>
         </Reveal>
 
         <Reveal delay={0.12} className="mt-10">
-          <div className="rounded-2xl border bg-card px-6 py-2 shadow-sm">
+          <div className="rounded-2xl border bg-card px-6 py-2 shadow-xs">
             <Accordion type="single" collapsible className="w-full">
               {faqItems.map((item, index) => (
                 <AccordionItem key={index} value={`faq-${index}`}>
@@ -53,5 +67,5 @@ export function Faq() {
         </Reveal>
       </div>
     </section>
-  )
+  );
 }

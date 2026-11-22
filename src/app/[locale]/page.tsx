@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site/header";
-import { Hero } from "@/components/site/hero";
-import { TransferWidget } from "@/components/transfer/transfer-widget";
+import { HubHero } from "@/components/site/hub-hero";
+import { ToolsGrid } from "@/components/site/tools-grid";
 import { StatsStrip } from "@/components/site/stats-strip";
 import { HowItWorks } from "@/components/site/how-it-works";
 import { SecuritySection } from "@/components/site/security-section";
-import { Faq } from "@/components/site/faq";
-import { FAQS } from "@/components/site/faq-data";
+import { Faq, HUB_FAQS } from "@/components/site/faq";
 import { Footer } from "@/components/site/footer";
 import { AdminApp } from "@/components/admin/admin-app";
 import { I18nProvider } from "@/i18n/context";
@@ -27,52 +26,44 @@ export function generateStaticParams() {
 }
 
 /**
- * JSON-LD structured data for the localized homepage.
+ * JSON-LD structured data for the localized homepage hub.
  */
 function StructuredData({ locale }: { locale: Locale }) {
   const dict = dictionaries[locale] || dictionaries.en;
+  const hub = dict.hub || dictionaries.en.hub!;
   const faqItems =
-    dict.faq?.items && dict.faq.items.length > 0 ? dict.faq.items : FAQS;
+    hub?.faqItems && hub.faqItems.length > 0 ? hub.faqItems : HUB_FAQS;
 
   const jsonLd = {
     "@context": "https://schema.org",
     "@graph": [
       {
-        "@type": "WebApplication",
-        "@id": `${SITE_URL}/${locale}#webapp`,
-        name: SITE_NAME,
-        alternateName: "ilovedoc.org",
-        url: `${SITE_URL}/${locale}`,
-        description: dict.hero.subtitle,
-        applicationCategory: "UtilityApplication",
-        applicationSubCategory: "File Transfer",
-        operatingSystem: "Any (web browser)",
-        browserRequirements:
-          "Requires JavaScript. Supports Chrome, Edge, Firefox, and Safari.",
-        isAccessibleForFree: true,
-        inLanguage: locale,
-        offers: {
-          "@type": "Offer",
-          price: "0",
-          priceCurrency: "USD",
-        },
-        featureList: [
-          dict.hero.trustE2e,
-          dict.hero.trustP2p,
-          dict.hero.trustNoSignup,
-          dict.hero.trustSha256,
-          dict.common.sendFiles,
-          dict.common.receiveFiles,
-        ],
-      },
-      {
         "@type": "WebSite",
         "@id": `${SITE_URL}/${locale}#website`,
         name: SITE_NAME,
         url: `${SITE_URL}/${locale}`,
-        description: dict.hero.subtitle,
-        publisher: { "@id": `${SITE_URL}/${locale}#webapp` },
+        description: hub.metaDesc || hub.subtitle,
         inLanguage: locale,
+        hasPart: [
+          {
+            "@type": "WebApplication",
+            name: `${SITE_NAME} — ${hub.transferCardTitle}`,
+            url: `${SITE_URL}/${locale}/files-transfer-online`,
+            applicationCategory: "UtilityApplication",
+            applicationSubCategory: "File Transfer Tool",
+            operatingSystem: "Any (web browser)",
+            isAccessibleForFree: true,
+          },
+          {
+            "@type": "WebApplication",
+            name: `${SITE_NAME} — ${hub.chatGptCardTitle}`,
+            url: `${SITE_URL}/${locale}/chatgpt-to-pdf`,
+            applicationCategory: "UtilityApplication",
+            applicationSubCategory: "Document Converter",
+            operatingSystem: "Any (web browser)",
+            isAccessibleForFree: true,
+          },
+        ],
       },
       {
         "@type": "FAQPage",
@@ -123,18 +114,55 @@ export async function generateMetadata({
     isSupportedLocale(locale) ? locale : DEFAULT_LOCALE
   ) as Locale;
   const dict = dictionaries[validLocale] || dictionaries.en;
+  const hub = dict.hub || dictionaries.en.hub!;
 
   const languagesRecord: Record<string, string> = {};
   for (const item of SUPPORTED_LOCALES) {
     languagesRecord[item.code] = `${SITE_URL}/${item.code}`;
   }
 
+  const pageTitle = `${SITE_NAME} — ${hub.metaTitle || hub.titlePre + hub.titleHighlight}`;
+  const pageDescription = hub.metaDesc || hub.subtitle;
+
   return {
-    title: `${SITE_NAME} — ${dict.hero.titlePre}${dict.hero.titleHighlight}${dict.hero.titlePost}`,
-    description: dict.hero.subtitle,
+    title: pageTitle,
+    description: pageDescription,
+    keywords: [
+      "free document tools",
+      "online document tools",
+      "send big files online free",
+      "files transfer online",
+      "chatgpt to pdf",
+      "p2p file transfer",
+      "free online file sharing",
+      "browser document tools",
+      "ilovedoc",
+    ],
     alternates: {
       canonical: `${SITE_URL}/${validLocale}`,
       languages: languagesRecord,
+    },
+    openGraph: {
+      title: pageTitle,
+      description: pageDescription,
+      url: `${SITE_URL}/${validLocale}`,
+      siteName: SITE_NAME,
+      locale: validLocale,
+      type: "website",
+      images: [
+        {
+          url: "/og-image.jpg",
+          width: 1216,
+          height: 640,
+          alt: "I Love Doc — Free Online Document & File Tools",
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: pageTitle,
+      description: pageDescription,
+      images: ["/og-image.jpg"],
     },
   };
 }
@@ -152,25 +180,38 @@ export default async function LocalizedHome({
     notFound();
   }
 
+  const dict = dictionaries[locale as Locale] || dictionaries.en;
   const sParams = await searchParams;
-  const isPrivateTransfer = Boolean(sParams.t || sParams.code);
 
   if (sParams.admin !== undefined) {
     return <AdminApp />;
   }
 
+  // If a share token or code is opened on the homepage, redirect to the dedicated transfer tool
+  if (sParams.t || sParams.code) {
+    const q = new URLSearchParams();
+    if (typeof sParams.t === "string") q.set("t", sParams.t);
+    if (typeof sParams.code === "string") q.set("code", sParams.code);
+    redirect(`/${locale}/files-transfer-online?${q.toString()}`);
+  }
+
   return (
     <I18nProvider initialLocale={locale as Locale}>
       <div className="min-h-screen flex flex-col bg-background">
-        {!isPrivateTransfer && <StructuredData locale={locale as Locale} />}
+        <StructuredData locale={locale as Locale} />
         <SiteHeader />
         <main className="flex-1">
-          <Hero />
-          <TransferWidget />
+          {/* Main Hub: Hero and Tool Showcase Cards */}
+          <HubHero />
+          <ToolsGrid />
           <StatsStrip />
           <HowItWorks />
           <SecuritySection />
-          <Faq />
+          <Faq
+            items={dict.hub?.faqItems || HUB_FAQS}
+            heading={dict.hub?.faqHeading || dict.faq?.heading}
+            subheading={dict.hub?.faqSubheading || dict.faq?.subheading}
+          />
         </main>
         <Footer />
       </div>

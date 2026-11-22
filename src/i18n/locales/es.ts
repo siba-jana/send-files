@@ -244,5 +244,74 @@ export const es: Dictionary = {
     settingsTitle: "Ajustes del documento y PDF",
     settingsDesc: "Personaliza temas, tamaño de papel y márgenes.",
   },
+  hub: {
+    badge: "Suite de herramientas gratuitas para documentos y archivos",
+    titlePre: "Herramientas online gratuitas para ",
+    titleHighlight: "documentos y archivos",
+    titlePost: "",
+    subtitle:
+      "Todas las herramientas que necesitas para enviar archivos grandes y convertir documentos en un solo lugar. 100% gratis, en el navegador y sin almacenamiento permanente en la nube.",
+    metaTitle: "Herramientas online gratuitas para documentos y archivos",
+    metaDesc:
+      "Herramientas web gratuitas y privadas para documentos y archivos. Envía archivos grandes P2P directamente y convierte texto de ChatGPT a PDF sin almacenamiento en la nube.",
+    toolsTitle: "Explora todas las herramientas",
+    toolsSubtitle:
+      "Utilidades web rápidas, seguras y privadas diseñadas para flujos de trabajo eficientes.",
+    transferCardTitle: "Enviar archivos grandes online",
+    transferCardDesc:
+      "Transfiere archivos de cualquier tamaño directamente punto a punto con WebRTC cifrado. Sin límites de tamaño, sin almacenamiento y sin registro.",
+    transferCardBadge: "P2P directo",
+    transferCardCta: "Abrir transferencia de archivos",
+    transferFeat1: "P2P directo entre navegadores",
+    transferFeat2: "Sin límite de tamaño de archivo",
+    transferFeat3: "Cifrado WebRTC de extremo a extremo",
+    transferFeat4: "Cero almacenamiento en la nube",
+    chatGptCardTitle: "Convertidor de ChatGPT a PDF",
+    chatGptCardDesc:
+      "Convierte conversaciones, prompts, código y markdown de ChatGPT en documentos PDF perfectamente formateados y listos para imprimir.",
+    chatGptCardBadge: "Nuevo",
+    chatGptCardCta: "Abrir convertidor",
+    chatGptFeat1: "Formatea Markdown de ChatGPT automáticamente",
+    chatGptFeat2: "Resaltado de sintaxis y fórmulas LaTeX",
+    chatGptFeat3: "Exportación PDF paginada en alta resolución",
+    chatGptFeat4: "Privacidad 100% en el cliente",
+    faqHeading: "Preguntas frecuentes",
+    faqSubheading:
+      "Preguntas habituales sobre la plataforma I Love Doc, privacidad y nuestras herramientas online gratuitas.",
+    faqItems: [
+      {
+        q: "¿Qué es I Love Doc?",
+        a: "I Love Doc es una suite de utilidades web gratuitas y privadas para documentos y archivos. Ofrecemos transferencia directa de archivos grandes P2P, conversión de ChatGPT a PDF y más herramientas nativas del navegador sin almacenamiento permanente.",
+      },
+      {
+        q: "¿Todas las herramientas de I Love Doc son totalmente gratuitas?",
+        a: "Sí, 100% gratis. No hay muros de pago, versiones premium ni suscripciones ocultas. Tienes acceso ilimitado para transferir archivos y convertir documentos en tu navegador.",
+      },
+      {
+        q: "¿Necesito una cuenta o iniciar sesión?",
+        a: "No. Creemos en la máxima privacidad y facilidad de uso. Nunca necesitas registrarte, iniciar sesión ni proporcionar un correo electrónico para usar nuestras herramientas.",
+      },
+      {
+        q: "¿Cómo protege I Love Doc mi privacidad y mis archivos?",
+        a: "A diferencia de servicios web tradicionales que suben tus archivos a servidores centrales, I Love Doc funciona con un modelo centrado en la privacidad: los archivos se transfieren directamente de navegador a navegador por WebRTC cifrado, y la conversión de ChatGPT a PDF se procesa 100% localmente en tu navegador. Tus archivos nunca quedan almacenados en nuestros servidores.",
+      },
+      {
+        q: "¿Qué herramientas están disponibles actualmente en I Love Doc?",
+        a: "Actualmente ofrecemos 'Enviar archivos grandes online' (transferencia P2P sin límite) y 'Convertidor de ChatGPT a PDF' (formato instantáneo y exportación de alta calidad). Continuamente desarrollamos nuevas herramientas.",
+      },
+      {
+        q: "¿Hay límites de tamaño de archivo o de uso?",
+        a: "No hay límites artificiales. Como la transferencia es directa entre navegadores, puedes enviar archivos de cualquier tamaño. También puedes convertir tantos documentos como desees sin cuotas diarias.",
+      },
+      {
+        q: "¿Qué dispositivos y navegadores son compatibles?",
+        a: "I Love Doc funciona sin problemas en cualquier navegador moderno: Chrome, Firefox, Safari, Edge y Opera en Windows, macOS, Linux, iOS y Android.",
+      },
+      {
+        q: "¿Se guardan mis archivos transferidos o PDFs generados?",
+        a: "No. Tenemos una estricta política de cero almacenamiento. Los PDFs generados existen solo en la memoria temporal de tu navegador y las transferencias fluyen de emisor a receptor.",
+      },
+    ],
+  },
 };
 

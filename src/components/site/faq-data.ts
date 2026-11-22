@@ -3,6 +3,9 @@ export interface FaqItemData {
   a: string;
 }
 
+/**
+ * File Transfer specific FAQs (used on /files-transfer-online).
+ */
 export const FAQS: readonly FaqItemData[] = [
   {
     q: "Is this really peer-to-peer?",
@@ -46,3 +49,40 @@ export const FAQS: readonly FaqItemData[] = [
   },
 ] as const;
 
+/**
+ * Platform & Document Suite FAQs (used on the Homepage Hub /).
+ */
+export const HUB_FAQS: readonly FaqItemData[] = [
+  {
+    q: "What is I Love Doc?",
+    a: "I Love Doc is a suite of free, privacy-first web utilities for documents and files. We offer direct peer-to-peer large file sharing, ChatGPT conversation-to-PDF conversion, and more browser-native productivity tools designed with zero permanent cloud storage.",
+  },
+  {
+    q: "Are all tools on I Love Doc completely free?",
+    a: "Yes, 100% free. There are no paywalls, premium tiers, or hidden subscriptions. You get unlimited access to send files and convert documents directly in your browser.",
+  },
+  {
+    q: "Do I need to create an account or sign in?",
+    a: "No. We believe in total friction-free utility and privacy. You never need an account, email address, phone number, or profile to use any tool on ilovedoc.org.",
+  },
+  {
+    q: "How does I Love Doc protect my privacy and files?",
+    a: "Unlike traditional web services that upload your files to centralized cloud servers, I Love Doc operates on a privacy-first model: files transferred with our P2P tool stream directly between devices over encrypted WebRTC, and documents converted with our ChatGPT to PDF tool are processed 100% locally in your browser. Your confidential data never lingers on our servers.",
+  },
+  {
+    q: "Which tools are currently available on I Love Doc?",
+    a: "Currently, I Love Doc offers 'Send Big Files Online' (unlimited-size peer-to-peer file transfer) and 'ChatGPT to PDF Converter' (instant formatting and high-DPI PDF generation for AI conversations, code, and math). Additional document tools are continuously being developed.",
+  },
+  {
+    q: "Are there any limits on file size or usage?",
+    a: "No artificial limits. Because transfers are peer-to-peer, you can send files of any size directly from your browser. You can also convert as many documents as you need without daily quotas.",
+  },
+  {
+    q: "Which devices and browsers work with I Love Doc?",
+    a: "I Love Doc works seamlessly on any modern web browser — including Google Chrome, Mozilla Firefox, Apple Safari, Microsoft Edge, and Opera — across Windows, macOS, Linux, iOS, and Android.",
+  },
+  {
+    q: "Are my transferred files or converted PDFs saved anywhere?",
+    a: "No. We have a strict zero-storage philosophy. Converted PDFs exist only in your browser's temporary memory, and file transfers stream ephemeral bytes directly from sender to recipient.",
+  },
+] as const;

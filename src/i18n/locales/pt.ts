@@ -244,5 +244,74 @@ export const pt: Dictionary = {
     settingsTitle: "Configurações do documento e PDF",
     settingsDesc: "Personalize temas, tamanho do papel e margens.",
   },
+  hub: {
+    badge: "Conjunto de ferramentas gratuitas para documentos e arquivos",
+    titlePre: "Ferramentas online gratuitas para ",
+    titleHighlight: "documentos e arquivos",
+    titlePost: "",
+    subtitle:
+      "Todas as ferramentas que você precisa para enviar arquivos grandes e converter documentos em um só lugar. 100% gratuito, direto no navegador e sem armazenamento em nuvem.",
+    metaTitle: "Ferramentas online gratuitas para documentos e arquivos",
+    metaDesc:
+      "Ferramentas web gratuitas e privadas para documentos e arquivos. Envie arquivos grandes direto por P2P e converta textos do ChatGPT para PDF sem armazenamento na nuvem.",
+    toolsTitle: "Explore todas as ferramentas",
+    toolsSubtitle:
+      "Utilitários web rápidos, seguros e privados para seus fluxos de trabalho.",
+    transferCardTitle: "Enviar arquivos grandes online",
+    transferCardDesc:
+      "Transfira arquivos de qualquer tamanho diretamente ponto a ponto via WebRTC criptografado. Sem limite de tamanho, sem nuvem e sem cadastro.",
+    transferCardBadge: "P2P direto",
+    transferCardCta: "Abrir transferência de arquivos",
+    transferFeat1: "P2P direto de navegador para navegador",
+    transferFeat2: "Sem limite de tamanho de arquivo",
+    transferFeat3: "Criptografia WebRTC de ponta a ponta",
+    transferFeat4: "Zero armazenamento em nuvem",
+    chatGptCardTitle: "Conversor de ChatGPT para PDF",
+    chatGptCardDesc:
+      "Converta conversas, prompts, códigos e markdown do ChatGPT em documentos PDF perfeitamente formatados e prontos para impressão.",
+    chatGptCardBadge: "Novo",
+    chatGptCardCta: "Abrir conversor",
+    chatGptFeat1: "Formatação automática do Markdown do ChatGPT",
+    chatGptFeat2: "Destaque de sintaxe e fórmulas LaTeX",
+    chatGptFeat3: "Exportação em alta resolução com paginação",
+    chatGptFeat4: "Privacidade 100% local no cliente",
+    faqHeading: "Perguntas frequentes",
+    faqSubheading:
+      "Dúvidas frequentes sobre a plataforma I Love Doc, privacidade e nossas ferramentas online gratuitas.",
+    faqItems: [
+      {
+        q: "O que é o I Love Doc?",
+        a: "O I Love Doc é um conjunto de ferramentas web gratuitas e com privacidade total para documentos e arquivos: envio P2P de arquivos gigantes, conversão de ChatGPT para PDF e muito mais sem nuvem permanente.",
+      },
+      {
+        q: "Todas as ferramentas no I Love Doc são totalmente gratuitas?",
+        a: "Sim, 100% gratuitas. Sem assinaturas ocultas nem limitações pagas. Você pode usar livremente todas as utilidades no seu navegador.",
+      },
+      {
+        q: "Preciso criar uma conta ou fazer login?",
+        a: "Não. Acreditamos na facilidade e privacidade. Você nunca precisa se cadastrar ou fornecer seu e-mail.",
+      },
+      {
+        q: "Como o I Love Doc protege minha privacidade e arquivos?",
+        a: "Ao contrário dos serviços que enviam arquivos para servidores centrais, o I Love Doc opera localmente ou via conexões P2P criptografadas (WebRTC). Seus arquivos confidenciais nunca são salvos em nossos servidores.",
+      },
+      {
+        q: "Quais ferramentas estão disponíveis atualmente no I Love Doc?",
+        a: "Atualmente oferecemos 'Enviar arquivos grandes online' (P2P sem limites) e o 'Conversor de ChatGPT para PDF'. Novas ferramentas estão a caminho.",
+      },
+      {
+        q: "Existem limites de tamanho ou uso?",
+        a: "Nenhum limite artificial. Como os arquivos vão diretamente de um aparelho ao outro, você pode transferir quantos gigabytes precisar sem cotas diárias.",
+      },
+      {
+        q: "Quais aparelhos e navegadores são compatíveis?",
+        a: "O I Love Doc funciona perfeitamente em todos os navegadores modernos (Chrome, Firefox, Safari, Edge, Opera) no Windows, macOS, Linux, iOS e Android.",
+      },
+      {
+        q: "Meus arquivos transferidos ou PDFs gerados ficam salvos?",
+        a: "Não. Temos uma política rigorosa de zero armazenamento. Tudo é processado apenas na memória temporária do seu navegador.",
+      },
+    ],
+  },
 };
 

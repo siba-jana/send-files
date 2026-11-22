@@ -47,6 +47,37 @@ export interface ChatGptToPdfDictionary {
   settingsDesc?: string;
 }
 
+export interface HubDictionary {
+  badge: string;
+  titlePre: string;
+  titleHighlight: string;
+  titlePost: string;
+  subtitle: string;
+  metaTitle: string;
+  metaDesc: string;
+  toolsTitle: string;
+  toolsSubtitle: string;
+  transferCardTitle: string;
+  transferCardDesc: string;
+  transferCardBadge: string;
+  transferCardCta: string;
+  transferFeat1: string;
+  transferFeat2: string;
+  transferFeat3: string;
+  transferFeat4: string;
+  chatGptCardTitle: string;
+  chatGptCardDesc: string;
+  chatGptCardBadge: string;
+  chatGptCardCta: string;
+  chatGptFeat1: string;
+  chatGptFeat2: string;
+  chatGptFeat3: string;
+  chatGptFeat4: string;
+  faqHeading: string;
+  faqSubheading: string;
+  faqItems: FaqItem[];
+}
+
 export interface Dictionary {
   common: {
     sendFiles: string;
@@ -217,5 +248,6 @@ export interface Dictionary {
     historyClear: string;
   };
   chatgptToPdf?: ChatGptToPdfDictionary;
+  hub?: HubDictionary;
 }
 
