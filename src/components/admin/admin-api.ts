@@ -161,6 +161,7 @@ export interface LogsResponse {
 export interface SessionResponse {
   authenticated: boolean;
   usingDefaultPassword: boolean;
+  username?: string | null;
   session: { expiresAt: number } | null;
 }
 

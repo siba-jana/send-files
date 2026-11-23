@@ -5,6 +5,7 @@ import { AdminApp } from "@/components/admin/admin-app";
 import { isSupportedLocale, SUPPORTED_LOCALES } from "@/i18n/locales";
 import {
   adminCookieName,
+  adminUsername,
   usingDefaultAdminPassword,
   verifyAdminSessionToken,
 } from "@/lib/server/admin-auth";
@@ -37,11 +38,13 @@ export default async function LocalizedAdminPage({
   const token = cookieStore.get(adminCookieName())?.value;
   const isAuthenticated = verifyAdminSessionToken(token);
   const usingDefault = usingDefaultAdminPassword();
+  const username = isAuthenticated ? adminUsername() : null;
 
   return (
     <AdminApp
       initialAuthenticated={isAuthenticated}
       usingDefaultPassword={usingDefault}
+      initialUsername={username}
     />
   );
 }

@@ -17,9 +17,11 @@ import { AdminDashboard } from "@/components/admin/admin-dashboard";
 export function AdminApp({
   initialAuthenticated,
   usingDefaultPassword,
+  initialUsername,
 }: {
   initialAuthenticated?: boolean;
   usingDefaultPassword?: boolean;
+  initialUsername?: string | null;
 } = {}) {
   const [phase, setPhase] = useState<"checking" | "anon" | "authed">(
     initialAuthenticated !== undefined
@@ -31,15 +33,21 @@ export function AdminApp({
   const [usingDefault, setUsingDefault] = useState<boolean | null>(
     usingDefaultPassword ?? null
   );
+  const [username, setUsername] = useState<string | null>(
+    initialUsername ?? null
+  );
 
   useEffect(() => {
-    if (initialAuthenticated !== undefined) return;
+    if (initialAuthenticated !== undefined && initialUsername !== undefined) return;
     let cancelled = false;
     void (async () => {
       try {
         const session = await adminFetch<SessionResponse>("/api/admin/session");
         if (!cancelled) {
           setUsingDefault(session.usingDefaultPassword);
+          if (session.username) {
+            setUsername(session.username);
+          }
           setPhase(session.authenticated ? "authed" : "anon");
         }
       } catch {
@@ -49,7 +57,7 @@ export function AdminApp({
     return () => {
       cancelled = true;
     };
-  }, [initialAuthenticated]);
+  }, [initialAuthenticated, initialUsername]);
 
   useEffect(() => {
     const onUnauthorized = () => setPhase("anon");
@@ -57,8 +65,16 @@ export function AdminApp({
     return () => window.removeEventListener("ilovedoc:admin-unauthorized", onUnauthorized);
   }, []);
 
-  const handleAuthenticated = useCallback(() => setPhase("authed"), []);
-  const handleSignedOut = useCallback(() => setPhase("anon"), []);
+  const handleAuthenticated = useCallback((user?: string) => {
+    if (user) {
+      setUsername(user);
+    }
+    setPhase("authed");
+  }, []);
+  const handleSignedOut = useCallback(() => {
+    setUsername(null);
+    setPhase("anon");
+  }, []);
 
   if (phase === "checking") {
     return (
@@ -83,5 +99,5 @@ export function AdminApp({
     );
   }
 
-  return <AdminDashboard onSignedOut={handleSignedOut} />;
+  return <AdminDashboard onSignedOut={handleSignedOut} username={username} />;
 }

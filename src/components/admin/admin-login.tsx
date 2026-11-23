@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, ShieldCheck, User } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,16 +10,17 @@ import { Label } from "@/components/ui/label";
 import { adminFetch } from "@/components/admin/admin-api";
 
 /**
- * Admin console sign-in. Single password (ADMIN_PASSWORD env on the server,
- * dev default with an on-screen hint while unset).
+ * Admin console sign-in. Single operator credentials (ADMIN_USERNAME &
+ * ADMIN_PASSWORD env on the server, dev defaults with an on-screen hint while unset).
  */
 export function AdminLogin({
   onAuthenticated,
   usingDefaultPassword,
 }: {
-  onAuthenticated: () => void;
+  onAuthenticated: (username?: string) => void;
   usingDefaultPassword?: boolean | null;
 }) {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -36,23 +37,23 @@ export function AdminLogin({
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
-    if (busy || !password) return;
+    if (busy || !username.trim() || !password) return;
     setBusy(true);
     setError(null);
     try {
       const res = await adminFetch<{ ok: boolean; usingDefaultPassword: boolean }>(
         "/api/admin/login",
-        { method: "POST", body: JSON.stringify({ password }) }
+        { method: "POST", body: JSON.stringify({ username: username.trim(), password }) }
       );
       setUsingDefault(res.usingDefaultPassword);
       if (res.ok) {
-        onAuthenticated();
+        onAuthenticated(username.trim());
         return;
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       if (message === "invalid_credentials") {
-        setError("Incorrect password. Try again.");
+        setError("Incorrect username or password. Try again.");
       } else if (message === "rate_limited") {
         setError("Too many attempts — wait a few minutes before retrying.");
       } else {
@@ -81,7 +82,28 @@ export function AdminLogin({
 
           <form onSubmit={submit} className="mt-7 space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="admin-password">Admin password</Label>
+              <Label htmlFor="admin-username">Username</Label>
+              <div className="relative">
+                <User
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground"
+                />
+                <Input
+                  id="admin-username"
+                  type="text"
+                  autoComplete="username"
+                  autoFocus
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  className="h-11 pl-9 pr-3"
+                  placeholder="admin"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="admin-password">Password</Label>
               <div className="relative">
                 <KeyRound
                   aria-hidden="true"
@@ -91,11 +113,11 @@ export function AdminLogin({
                   id="admin-password"
                   type={reveal ? "text" : "password"}
                   autoComplete="current-password"
-                  autoFocus
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="h-11 pl-9 pr-11"
                   placeholder="••••••••••••"
+                  required
                 />
                 <button
                   type="button"
@@ -116,7 +138,7 @@ export function AdminLogin({
 
             <Button
               type="submit"
-              disabled={busy || !password}
+              disabled={busy || !username.trim() || !password}
               className="h-11 w-full rounded-xl bg-rose-600 shadow-lg shadow-rose-600/25 hover:bg-rose-700 dark:bg-rose-500 dark:hover:bg-rose-600"
             >
               {busy ? (
@@ -132,10 +154,10 @@ export function AdminLogin({
 
           {usingDefault === true && (
             <p className="mt-5 rounded-xl bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
-              Sandbox default password:{" "}
-              <code className="rounded bg-amber-500/15 px-1 py-0.5 font-mono">ilovedoc-admin</code>
-              . Set <code className="font-mono">ADMIN_PASSWORD</code> in production to remove
-              this hint.
+              Default credentials: username{" "}
+              <code className="rounded bg-amber-500/15 px-1 py-0.5 font-mono">admin</code>, password{" "}
+              <code className="rounded bg-amber-500/15 px-1 py-0.5 font-mono">ilovedoc-admin</code>.
+              Set <code className="font-mono">ADMIN_USERNAME</code> and <code className="font-mono">ADMIN_PASSWORD</code> in production to remove this hint.
             </p>
           )}
         </div>

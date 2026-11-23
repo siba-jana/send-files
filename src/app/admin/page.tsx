@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { AdminApp } from "@/components/admin/admin-app";
 import {
   adminCookieName,
+  adminUsername,
   usingDefaultAdminPassword,
   verifyAdminSessionToken,
 } from "@/lib/server/admin-auth";
@@ -22,11 +23,13 @@ export default async function AdminPage() {
   const token = cookieStore.get(adminCookieName())?.value;
   const isAuthenticated = verifyAdminSessionToken(token);
   const usingDefault = usingDefaultAdminPassword();
+  const username = isAuthenticated ? adminUsername() : null;
 
   return (
     <AdminApp
       initialAuthenticated={isAuthenticated}
       usingDefaultPassword={usingDefault}
+      initialUsername={username}
     />
   );
 }
