@@ -520,24 +520,27 @@ export function TextEditor() {
       </div>
 
       {/* stats bar */}
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
-        <span>
+      <div
+        suppressHydrationWarning
+        className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground"
+      >
+        <span suppressHydrationWarning>
           <strong className="font-semibold text-foreground">{stats.words.toLocaleString()}</strong> words
         </span>
-        <span>
+        <span suppressHydrationWarning>
           <strong className="font-semibold text-foreground">{stats.characters.toLocaleString()}</strong> characters
         </span>
-        <span>
+        <span suppressHydrationWarning>
           <strong className="font-semibold text-foreground">{stats.paragraphs.toLocaleString()}</strong> paragraphs
         </span>
-        <span>
+        <span suppressHydrationWarning>
           <strong className="font-semibold text-foreground">
             {stats.estimatedPages ? `~${stats.estimatedPages}` : 0}
           </strong>{" "}
           pages
         </span>
         {stats.readingMinutes > 0 && (
-          <span>
+          <span suppressHydrationWarning>
             <strong className="font-semibold text-foreground">~{stats.readingMinutes}</strong> min read
           </span>
         )}

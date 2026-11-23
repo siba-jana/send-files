@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { notFound } from "next/navigation";
-import { BadgeCheck, ShieldCheck, UserCheck } from "lucide-react";
+import { BadgeCheck, Loader2, ShieldCheck, UserCheck } from "lucide-react";
 
 import { SiteHeader } from "@/components/site/header";
 import { Footer } from "@/components/site/footer";
@@ -21,9 +22,21 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
-import { TextToPdfTool } from "@/components/pdf-tool/text-to-pdf-tool";
 import { TextFeatureSection } from "@/components/pdf-tool/text-feature-section";
 import { faqItems } from "@/lib/seo-faq";
+
+const TextToPdfTool = dynamic(
+  () => import("@/components/pdf-tool/text-to-pdf-tool").then((mod) => mod.TextToPdfTool),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[640px] w-full flex-col items-center justify-center rounded-xl border bg-card/50 text-muted-foreground shadow-sm">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" aria-hidden />
+        <p className="text-sm font-medium">Loading Text to PDF Converter…</p>
+      </div>
+    ),
+  }
+);
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || "https://www.ilovedoc.org";

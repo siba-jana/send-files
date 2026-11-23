@@ -15,7 +15,22 @@ export function escapeHtml(text: string): string {
 
 /** Converts editor HTML into clean plain text (block aware). */
 export function htmlToPlainText(html: string): string {
-  if (typeof window === "undefined" || !html) return "";
+  if (!html) return "";
+  if (typeof window === "undefined") {
+    return html
+      .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, "")
+      .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, "")
+      .replace(/<br\s*\/?>/gi, "\n")
+      .replace(/<\/p>|<\/div>|<\/li>|<\/h[1-6]>/gi, "\n\n")
+      .replace(/<[^>]+>/g, "")
+      .replace(/&nbsp;/gi, " ")
+      .replace(/&amp;/gi, "&")
+      .replace(/&lt;/gi, "<")
+      .replace(/&gt;/gi, ">")
+      .replace(/&quot;/gi, '"')
+      .replace(/&#39;/gi, "'")
+      .trim();
+  }
   const doc = new DOMParser().parseFromString(html, "text/html");
   const parts: string[] = [];
 

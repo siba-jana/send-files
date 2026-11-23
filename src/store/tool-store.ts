@@ -274,7 +274,15 @@ export const useToolStore = create<ToolState>()(
     }),
     {
       name: "t2pdf-draft-v1",
-      storage: createJSONStorage(() => sessionStorage),
+      storage: createJSONStorage(() =>
+        typeof window !== "undefined"
+          ? window.sessionStorage
+          : ({
+              getItem: () => null,
+              setItem: () => {},
+              removeItem: () => {},
+            } as unknown as Storage)
+      ),
       version: 3,
       partialize: (state): PersistedDraft => ({
         mode: state.mode,
