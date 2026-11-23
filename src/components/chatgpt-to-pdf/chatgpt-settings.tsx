@@ -141,9 +141,9 @@ export function ChatGptSettings({
 
         {/* Orientation Selector */}
         <div className="mt-3.5">
-          <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
             Orientation
-          </Label>
+          </span>
           <div className="grid grid-cols-2 gap-2">
             {(["portrait", "landscape"] as Orientation[]).map((ori) => (
               <Button
@@ -166,9 +166,9 @@ export function ChatGptSettings({
 
         {/* Margins */}
         <div className="mt-3.5">
-          <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
             Print Margins
-          </Label>
+          </span>
           <div className="grid grid-cols-3 gap-1.5">
             {(
               [
@@ -205,9 +205,9 @@ export function ChatGptSettings({
 
         {/* Font Family */}
         <div className="mb-3.5">
-          <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
             Font Family
-          </Label>
+          </span>
           <div className="grid grid-cols-3 gap-1.5">
             {[
               { id: "sans", label: "Modern Sans", sample: "Sans" },
@@ -245,9 +245,9 @@ export function ChatGptSettings({
 
         {/* Font Size */}
         <div className="mb-3.5">
-          <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
             Base Font Size
-          </Label>
+          </span>
           <div className="grid grid-cols-3 gap-1.5">
             {[
               { id: "sm", label: "Compact (13.5px)" },
@@ -274,9 +274,9 @@ export function ChatGptSettings({
 
         {/* Line Height */}
         <div>
-          <Label className="text-xs font-medium text-muted-foreground mb-1.5 block">
+          <span className="text-xs font-medium text-muted-foreground mb-1.5 block">
             Line Spacing
-          </Label>
+          </span>
           <div className="grid grid-cols-3 gap-1.5">
             {[
               { id: "compact", label: "Tight" },
@@ -305,7 +305,10 @@ export function ChatGptSettings({
       {/* 4. Page Numbering */}
       <div className="flex items-center justify-between rounded-xl border border-slate-200/90 dark:border-slate-800 p-3 bg-slate-50/50 dark:bg-slate-900/50">
         <div>
-          <Label className="font-semibold text-xs text-foreground cursor-pointer">
+          <Label
+            htmlFor="chatgpt-page-numbers-switch"
+            className="font-semibold text-xs text-foreground cursor-pointer"
+          >
             Footer Page Numbering
           </Label>
           <p className="text-[11px] text-muted-foreground">
@@ -313,6 +316,7 @@ export function ChatGptSettings({
           </p>
         </div>
         <Switch
+          id="chatgpt-page-numbers-switch"
           checked={settings.showPageNumbers}
           onCheckedChange={(val) => updateSetting("showPageNumbers", val)}
         />

@@ -214,7 +214,11 @@ interface FieldProps {
 function Field({ label, htmlFor, helperText, className, children }: FieldProps) {
   return (
     <div className={cn("flex flex-col gap-2", className)}>
-      <Label htmlFor={htmlFor}>{label}</Label>
+      {htmlFor ? (
+        <Label htmlFor={htmlFor}>{label}</Label>
+      ) : (
+        <span className="text-sm font-medium leading-none">{label}</span>
+      )}
       {children}
       {helperText ? <p className="text-xs text-muted-foreground">{helperText}</p> : null}
     </div>
@@ -377,7 +381,7 @@ function SliderField({
   return (
     <div className={cn("flex flex-col gap-2", className)}>
       <div className="flex items-center justify-between gap-3">
-        <Label>{label}</Label>
+        <span className="text-sm font-medium leading-none">{label}</span>
         <span className="tabular-nums text-sm text-muted-foreground">
           {format ? format(value) : `${value}${unit ? ` ${unit}` : ""}`}
         </span>
@@ -555,7 +559,7 @@ export function SettingsPanel() {
       <CardContent>
         <div className="flex flex-col gap-2 pb-4">
           <div className="flex flex-wrap items-center gap-2">
-            <Label>Quick presets</Label>
+            <span className="text-sm font-medium text-foreground">Quick presets</span>
             {DOCUMENT_PRESETS.map((preset) => (
               <Button
                 key={preset.id}

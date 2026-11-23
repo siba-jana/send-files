@@ -409,11 +409,12 @@ export function ChatGptToPdfApp() {
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5 items-end">
           {/* 1. Document Style */}
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
+            <Label htmlFor="chatgpt-style-select" className="text-[11px] font-semibold text-muted-foreground flex items-center gap-1">
               <Palette className="size-3 text-violet-600" />
               <span>Document Style</span>
             </Label>
             <select
+              id="chatgpt-style-select"
               value={settings.theme}
               onChange={(e) =>
                 setSettings((s) => ({ ...s, theme: e.target.value as DocumentTheme }))
@@ -431,10 +432,11 @@ export function ChatGptToPdfApp() {
 
           {/* 2. Page Size */}
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold text-muted-foreground">
+            <Label htmlFor="chatgpt-pagesize-select" className="text-[11px] font-semibold text-muted-foreground">
               Page Size
             </Label>
             <select
+              id="chatgpt-pagesize-select"
               value={settings.pageSize}
               onChange={(e) =>
                 setSettings((s) => ({ ...s, pageSize: e.target.value as PageSize }))
@@ -448,10 +450,11 @@ export function ChatGptToPdfApp() {
 
           {/* 3. Orientation */}
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold text-muted-foreground">
+            <Label htmlFor="chatgpt-orientation-select" className="text-[11px] font-semibold text-muted-foreground">
               Orientation
             </Label>
             <select
+              id="chatgpt-orientation-select"
               value={settings.orientation}
               onChange={(e) =>
                 setSettings((s) => ({
@@ -468,10 +471,11 @@ export function ChatGptToPdfApp() {
 
           {/* 4. Margins */}
           <div className="space-y-1.5">
-            <Label className="text-[11px] font-semibold text-muted-foreground">
+            <Label htmlFor="chatgpt-margins-select" className="text-[11px] font-semibold text-muted-foreground">
               Margins
             </Label>
             <select
+              id="chatgpt-margins-select"
               value={settings.margin}
               onChange={(e) =>
                 setSettings((s) => ({ ...s, margin: e.target.value as MarginSize }))
@@ -486,10 +490,11 @@ export function ChatGptToPdfApp() {
 
           {/* 5. File Name */}
           <div className="space-y-1.5 col-span-2 sm:col-span-1">
-            <Label className="text-[11px] font-semibold text-muted-foreground">
+            <Label htmlFor="chatgpt-filename-input" className="text-[11px] font-semibold text-muted-foreground">
               File Name
             </Label>
             <Input
+              id="chatgpt-filename-input"
               value={fileName}
               onChange={(e) => setFileName(e.target.value)}
               placeholder="chatgpt-conversation.pdf"
