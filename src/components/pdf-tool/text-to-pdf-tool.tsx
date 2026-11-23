@@ -12,7 +12,7 @@
 
 import { useEffect, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PencilLine, Eye } from "lucide-react";
+import { PencilLine, Eye, Loader2 } from "lucide-react";
 import { useToolStore } from "@/store/tool-store";
 import { TextEditor } from "./editor/text-editor";
 import { PreviewPanel } from "./preview/preview-panel";
@@ -21,14 +21,20 @@ import { ActionsBar } from "./actions-bar";
 import { usePdfGeneration } from "./hooks/use-pdf-generation";
 
 export function TextToPdfTool() {
+  const [mounted, setMounted] = useState(false);
   const loadSample = useToolStore((s) => s.loadSample);
   const { status, result, error, isEmpty, regenerate, download, print, openInTab } = usePdfGeneration();
   const [mobileTab, setMobileTab] = useState<"edit" | "preview">("edit");
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   const sizeKb = result ? Math.max(1, Math.round(result.bytes.byteLength / 1024)) : 0;
 
   // Ctrl/Cmd+S downloads the current document.
   useEffect(() => {
+    if (!mounted) return;
     const onKeyDown = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
         event.preventDefault();
@@ -37,7 +43,16 @@ export function TextToPdfTool() {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [isEmpty, status, download]);
+  }, [mounted, isEmpty, status, download]);
+
+  if (!mounted) {
+    return (
+      <div className="flex h-[640px] w-full flex-col items-center justify-center rounded-xl border bg-card/50 text-muted-foreground shadow-sm">
+        <Loader2 className="h-8 w-8 animate-spin text-primary mb-3" aria-hidden />
+        <p className="text-sm font-medium">Loading Text to PDF Converter…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-4">
