@@ -18,15 +18,22 @@ export function SiteHeader() {
 
   const isTransferPage = pathname.includes("/files-transfer-online")
   const isChatGptPdf = pathname.includes("/chatgpt-to-pdf")
+  const isTextToPdf = pathname.includes("/text-to-pdf")
   const homeUrl = `/${locale}`
   const transferUrl = `/${locale}/files-transfer-online`
   const chatGptPdfUrl = `/${locale}/chatgpt-to-pdf`
+  const textToPdfUrl = `/${locale}/text-to-pdf`
 
   const navLinks = [
     {
       href: transferUrl,
       label: t("common.sendFiles") || "File Transfer",
       isActive: isTransferPage,
+    },
+    {
+      href: textToPdfUrl,
+      label: "Text to PDF",
+      isActive: isTextToPdf,
     },
     {
       href: chatGptPdfUrl,

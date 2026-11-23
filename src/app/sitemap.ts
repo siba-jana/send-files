@@ -35,6 +35,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     }));
 
+  const localizedTextToPdfPages: MetadataRoute.Sitemap =
+    SUPPORTED_LOCALES.map((l) => ({
+      url: `${SITE_URL}/${l.code}/text-to-pdf`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    }));
+
   return [
     {
       url: `${SITE_URL}/`,
@@ -57,6 +65,13 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 0.9,
     },
     ...localizedChatGptToPdfPages,
+    {
+      url: `${SITE_URL}/text-to-pdf`,
+      lastModified: new Date(),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    ...localizedTextToPdfPages,
     {
       url: `${SITE_URL}/send-large-files`,
       lastModified: new Date(),
