@@ -74,6 +74,14 @@ export interface HubDictionary {
   chatGptFeat2: string;
   chatGptFeat3: string;
   chatGptFeat4: string;
+  textToPdfCardTitle?: string;
+  textToPdfCardDesc?: string;
+  textToPdfCardBadge?: string;
+  textToPdfCardCta?: string;
+  textToPdfFeat1?: string;
+  textToPdfFeat2?: string;
+  textToPdfFeat3?: string;
+  textToPdfFeat4?: string;
   faqHeading: string;
   faqSubheading: string;
   faqItems: FaqItem[];

@@ -20,6 +20,7 @@ export function HubHero() {
   const hub = dict.hub || dictionaries.en.hub!;
 
   const transferUrl = `/${locale}/files-transfer-online`;
+  const textToPdfUrl = `/${locale}/text-to-pdf`;
   const chatGptPdfUrl = `/${locale}/chatgpt-to-pdf`;
 
   const trustItems = [
@@ -74,10 +75,23 @@ export function HubHero() {
             size="lg"
             variant="outline"
             asChild
+            className="h-12 rounded-xl border-blue-500/40 bg-blue-500/5 px-6 text-base font-semibold text-blue-700 hover:bg-blue-500/10 dark:border-blue-500/40 dark:text-blue-400 dark:hover:bg-blue-500/20"
+          >
+            <Link href={textToPdfUrl}>
+              <FileText aria-hidden="true" className="size-4 text-blue-600 dark:text-blue-400" />
+              Text to PDF
+              <ArrowRight aria-hidden="true" className="size-4 opacity-70" />
+            </Link>
+          </Button>
+
+          <Button
+            size="lg"
+            variant="outline"
+            asChild
             className="h-12 rounded-xl border-emerald-500/40 bg-emerald-500/5 px-6 text-base font-semibold text-emerald-700 hover:bg-emerald-500/10 dark:border-emerald-500/40 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
           >
             <Link href={chatGptPdfUrl}>
-              <FileText aria-hidden="true" className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <Sparkles aria-hidden="true" className="size-4 text-emerald-600 dark:text-emerald-400" />
               {hub.chatGptCardTitle}
               <ArrowRight aria-hidden="true" className="size-4 opacity-70" />
             </Link>

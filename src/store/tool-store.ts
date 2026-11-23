@@ -185,8 +185,8 @@ export const useToolStore = create<ToolState>()(
   persist(
     (set, get) => ({
       mode: "rich",
-      html: "",
-      plainText: "",
+      html: SAMPLE_HTML.trim(),
+      plainText: htmlToPlainText(SAMPLE_HTML.trim()),
       config: DEFAULT_CONFIG,
       revision: 0,
 

@@ -53,6 +53,15 @@ function StructuredData({ locale }: { locale: Locale }) {
           },
           {
             "@type": "WebApplication",
+            name: `${SITE_NAME} — Text to PDF Converter`,
+            url: `${SITE_URL}/${locale}/text-to-pdf`,
+            applicationCategory: "UtilityApplication",
+            applicationSubCategory: "Document Converter",
+            operatingSystem: "Any (web browser)",
+            isAccessibleForFree: true,
+          },
+          {
+            "@type": "WebApplication",
             name: `${SITE_NAME} — ${hub.chatGptCardTitle}`,
             url: `${SITE_URL}/${locale}/chatgpt-to-pdf`,
             applicationCategory: "UtilityApplication",
