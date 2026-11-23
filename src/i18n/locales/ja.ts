@@ -239,6 +239,18 @@ export const ja: Dictionary = {
     settingsTitle: "ドキュメント＆PDF設定",
     settingsDesc: "テーマ、用紙サイズ、余白をカスタマイズ。",
   },
+  textToPdf: {
+    title: "テキストをオンラインで無料でPDFに変換",
+    h1: "テキストをオンラインで無料でPDFに変換",
+    subtitle:
+      "テキストをオンラインでプロ仕様のPDF文書に無料変換。文字を入力または貼り付け、フォントや余白、ヘッダー・フッターを自由に調整して即座にプレビュー・ダウンロードできます。",
+    metaDesc:
+      "テキストをオンラインで無料でPDFに変換。文章を入力または貼り付け、フォントや用紙サイズ、余白をカスタマイズして瞬時にダウンロード。",
+    breadcrumb: "テキスト PDF 変換",
+    freeBadge: "100% 無料",
+    noSignupBadge: "登録不要",
+    privateBadge: "完全非公開 — ブラウザ内で完結",
+  },
   hub: {
     badge: "無料オンラインツール集",
     titlePre: "無料 ",

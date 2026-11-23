@@ -5,11 +5,18 @@
  * watermark support).
  */
 
-import { PDFDocument, StandardFonts, degrees, rgb } from "pdf-lib";
 import { FONT_FAMILIES, getFontFileBytes, SCRIPT_FONT } from "./fonts";
 import { hexToRgb01 } from "./colors";
 import { detectScripts } from "./unicode";
 import type { WatermarkConfig } from "./types";
+
+let pdfLibPromise: Promise<typeof import("pdf-lib")> | null = null;
+function getPdfLib() {
+  if (!pdfLibPromise) {
+    pdfLibPromise = import("pdf-lib");
+  }
+  return pdfLibPromise;
+}
 
 function resolveAngle(wm: WatermarkConfig): number {
   if (wm.placement === "horizontal") return 0;
@@ -31,6 +38,7 @@ export async function applyWatermark(bytes: Uint8Array, wm: WatermarkConfig): Pr
   const text = wm.text.trim();
   if (!text) return bytes;
 
+  const { PDFDocument, StandardFonts, degrees, rgb } = await getPdfLib();
   const pdfDoc = await PDFDocument.load(bytes);
   const pages = pdfDoc.getPages();
 
@@ -112,6 +120,7 @@ export async function applyWatermark(bytes: Uint8Array, wm: WatermarkConfig): Pr
 
 /** Counts pages of a PDF without rendering it (used for status display). */
 export async function countPdfPages(bytes: Uint8Array): Promise<number> {
+  const { PDFDocument } = await getPdfLib();
   const pdfDoc = await PDFDocument.load(bytes);
   return pdfDoc.getPageCount();
 }

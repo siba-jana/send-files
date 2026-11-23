@@ -240,6 +240,18 @@ export const zh: Dictionary = {
     settingsTitle: "文档与 PDF 设置",
     settingsDesc: "自定义主题、纸张尺寸和页面边距。",
   },
+  textToPdf: {
+    title: "免费在线文本转PDF",
+    h1: "免费在线文本转PDF",
+    subtitle:
+      "免费在线将文本转换为专业 PDF 文档。输入或粘贴内容，自定义字体、排版、页边距、页眉页脚与水印，即时预览并下载，无需注册或安装软件。",
+    metaDesc:
+      "免费在线将文本转换为 PDF。输入或粘贴文字，自由调整字体、边距、纸张尺寸与页眉页脚，快速生成高质量 PDF。",
+    breadcrumb: "文本转PDF转换器",
+    freeBadge: "100% 免费",
+    noSignupBadge: "无需注册",
+    privateBadge: "隐私保护 — 浏览器本地处理",
+  },
   hub: {
     badge: "免费在线工具套件",
     titlePre: "免费 ",

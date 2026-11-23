@@ -8,6 +8,7 @@ import { Footer } from "@/components/site/footer";
 import { I18nProvider } from "@/i18n/context";
 import {
   DEFAULT_LOCALE,
+  dictionaries,
   isSupportedLocale,
   SUPPORTED_LOCALES,
 } from "@/i18n/locales";
@@ -37,14 +38,18 @@ export function generateStaticParams() {
  * JSON-LD structured data for the Text to PDF Converter tool.
  */
 function StructuredData({ locale }: { locale: Locale }) {
-  const pageTitle = "Text to PDF Converter — Free Online";
+  const dict = dictionaries[locale] || dictionaries.en;
+  const toolDict = dict.textToPdf;
+  const pageTitle = toolDict?.title || "Convert Text to PDF Online Free";
   const pageDesc =
+    toolDict?.metaDesc ||
+    toolDict?.subtitle ||
     "Convert text to PDF online for free. Type or paste your content, customize fonts, margins, page size, headers, footers, and download professional PDF documents instantly.";
 
   const softwareAppJsonLd = {
     "@context": "https://schema.org",
     "@type": "SoftwareApplication",
-    name: "Text to PDF Converter",
+    name: toolDict?.title || "Convert Text to PDF Online Free",
     applicationCategory: "UtilitiesApplication",
     operatingSystem: "Any (web browser)",
     url: `${SITE_URL}/${locale}/text-to-pdf`,
@@ -98,7 +103,7 @@ function StructuredData({ locale }: { locale: Locale }) {
       {
         "@type": "ListItem",
         position: 2,
-        name: "Text to PDF Converter",
+        name: toolDict?.breadcrumb || "Text to PDF Converter",
         item: `${SITE_URL}/${locale}/text-to-pdf`,
       },
     ],
@@ -136,13 +141,20 @@ export async function generateMetadata({
     isSupportedLocale(locale) ? locale : DEFAULT_LOCALE
   ) as Locale;
 
+  const dict = dictionaries[validLocale] || dictionaries.en;
+  const toolDict = dict.textToPdf;
+
   const languagesRecord: Record<string, string> = {};
   for (const item of SUPPORTED_LOCALES) {
     languagesRecord[item.code] = `${SITE_URL}/${item.code}/text-to-pdf`;
   }
 
-  const pageTitle = `Convert Text to PDF Online (Free & Fast) — ${SITE_NAME}`;
+  const pageTitle = toolDict?.title
+    ? `${toolDict.title} — ${SITE_NAME}`
+    : `Convert Text to PDF Online Free — ${SITE_NAME}`;
   const pageDescription =
+    toolDict?.metaDesc ||
+    toolDict?.subtitle ||
     "Convert text to PDF online for free. Type or paste your content, customize fonts, margins, page size, headers, footers, and download professional PDF documents instantly.";
 
   return {
@@ -189,6 +201,9 @@ export default async function TextToPdfPage({
     notFound();
   }
 
+  const dict = dictionaries[locale] || dictionaries.en;
+  const toolDict = dict.textToPdf;
+
   return (
     <I18nProvider initialLocale={locale}>
       <StructuredData locale={locale} />
@@ -206,34 +221,33 @@ export default async function TextToPdfPage({
                 </BreadcrumbItem>
                 <BreadcrumbSeparator />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Text to PDF Converter</BreadcrumbPage>
+                  <BreadcrumbPage>
+                    {toolDict?.breadcrumb || "Text to PDF Converter"}
+                  </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
 
             <section id="converter" className="scroll-mt-20 pb-8 pt-6 sm:pb-10">
               <h1 className="text-3xl font-bold tracking-tight sm:text-4xl lg:text-5xl">
-                Free Text to PDF Converter Online
+                {toolDict?.h1 || "Convert Text to PDF Online Free"}
               </h1>
               <p className="mt-4 max-w-3xl text-base text-muted-foreground sm:text-lg">
-                Convert your text into professional PDF documents online for free.
-                Type or paste your content, customize fonts, formatting, page size,
-                margins, headers, footers, and other document settings. Preview your
-                PDF before downloading. No software installation or registration
-                required.
+                {toolDict?.subtitle ||
+                  "Convert your text into professional PDF documents online for free. Type or paste your content, customize fonts, formatting, page size, margins, headers, footers, and other document settings. Preview your PDF before downloading. No software installation or registration required."}
               </p>
               <div className="mt-6 flex flex-wrap items-center gap-2">
                 <Badge variant="secondary">
                   <BadgeCheck aria-hidden="true" className="mr-1.5 size-4" />
-                  100% Free
+                  {toolDict?.freeBadge || "100% Free"}
                 </Badge>
                 <Badge variant="secondary">
                   <UserCheck aria-hidden="true" className="mr-1.5 size-4" />
-                  No sign-up required
+                  {toolDict?.noSignupBadge || "No sign-up required"}
                 </Badge>
                 <Badge variant="secondary">
                   <ShieldCheck aria-hidden="true" className="mr-1.5 size-4" />
-                  Private — runs in your browser
+                  {toolDict?.privateBadge || "Private — runs in your browser"}
                 </Badge>
               </div>
             </section>

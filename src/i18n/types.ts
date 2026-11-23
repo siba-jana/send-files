@@ -48,6 +48,17 @@ export interface ChatGptToPdfDictionary {
   settingsDesc?: string;
 }
 
+export interface TextToPdfDictionary {
+  title: string;
+  h1: string;
+  subtitle: string;
+  metaDesc?: string;
+  breadcrumb?: string;
+  freeBadge?: string;
+  noSignupBadge?: string;
+  privateBadge?: string;
+}
+
 export interface HubDictionary {
   badge: string;
   titlePre: string;
@@ -258,6 +269,7 @@ export interface Dictionary {
     historyClear: string;
   };
   chatgptToPdf?: ChatGptToPdfDictionary;
+  textToPdf?: TextToPdfDictionary;
   hub?: HubDictionary;
 }
 

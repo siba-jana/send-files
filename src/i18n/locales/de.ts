@@ -248,6 +248,18 @@ export const de: Dictionary = {
     settingsTitle: "Dokument- & PDF-Einstellungen",
     settingsDesc: "Designs, Papierformat und Ränder anpassen.",
   },
+  textToPdf: {
+    title: "Text kostenlos online in PDF umwandeln",
+    h1: "Text kostenlos online in PDF umwandeln",
+    subtitle:
+      "Wandeln Sie Ihren Text kostenlos online in professionelle PDF-Dokumente um. Geben Sie Text ein, passen Sie Schriftarten, Ränder, Kopf- und Fußzeilen an. Keine Installation oder Registrierung erforderlich.",
+    metaDesc:
+      "Text kostenlos online in PDF umwandeln. Text eingeben oder einfügen, Schriftarten, Ränder und Seitengröße anpassen und sofort PDF herunterladen.",
+    breadcrumb: "Text zu PDF Konverter",
+    freeBadge: "100% Kostenlos",
+    noSignupBadge: "Keine Registrierung",
+    privateBadge: "Privat — läuft im Browser",
+  },
   hub: {
     badge: "Kostenlose Online-Tools Suite",
     titlePre: "Kostenlose ",

@@ -248,6 +248,18 @@ export const pt: Dictionary = {
     settingsTitle: "Configurações do documento e PDF",
     settingsDesc: "Personalize temas, tamanho do papel e margens.",
   },
+  textToPdf: {
+    title: "Converter texto em PDF online grátis",
+    h1: "Converter texto em PDF online grátis",
+    subtitle:
+      "Converta seu texto em documentos PDF profissionais online e gratuitamente. Digite ou cole seu conteúdo, personalize fontes, margens, cabeçalhos e rodapés. Sem necessidade de cadastro.",
+    metaDesc:
+      "Converta texto em PDF online grátis. Digite ou cole seu conteúdo, personalize fontes, margens e formato de página e baixe seu PDF instantaneamente.",
+    breadcrumb: "Conversor de texto para PDF",
+    freeBadge: "100% Grátis",
+    noSignupBadge: "Sem cadastro",
+    privateBadge: "Privado — no seu navegador",
+  },
   hub: {
     badge: "Conjunto de ferramentas online gratuitas",
     titlePre: "Ferramentas online ",

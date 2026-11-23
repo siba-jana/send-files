@@ -248,6 +248,18 @@ export const en: Dictionary = {
     settingsTitle: "Document & PDF Settings",
     settingsDesc: "Customize themes, paper size, and page margins.",
   },
+  textToPdf: {
+    title: "Convert Text to PDF Online Free",
+    h1: "Convert Text to PDF Online Free",
+    subtitle:
+      "Convert your text into professional PDF documents online for free. Type or paste your content, customize fonts, formatting, page size, margins, headers, footers, and other document settings. Preview your PDF before downloading. No software installation or registration required.",
+    metaDesc:
+      "Convert text to PDF online for free. Type or paste your content, customize fonts, margins, page size, headers, footers, and download professional PDF documents instantly.",
+    breadcrumb: "Text to PDF Converter",
+    freeBadge: "100% Free",
+    noSignupBadge: "No sign-up required",
+    privateBadge: "Private — runs in your browser",
+  },
   hub: {
     badge: "Free Online Tools Suite",
     titlePre: "Free ",
