@@ -13,10 +13,12 @@ export function FooterNav() {
   const onHome = pathname === "/" || /^\/[a-z]{2}(\/)?$/.test(pathname)
 
   const toolUrl = `/${locale}/files-transfer-online`
+  const textToPdfUrl = `/${locale}/text-to-pdf`
   const chatGptPdfUrl = `/${locale}/chatgpt-to-pdf`
 
   const mainLinks = [
     { kind: "route", href: toolUrl, label: t("footer.sendAndReceive") },
+    { kind: "route", href: textToPdfUrl, label: "Text to PDF" },
     { kind: "route", href: chatGptPdfUrl, label: "ChatGPT to PDF" },
     { kind: "route", href: "/send-large-files", label: t("footer.sendLargeFiles") },
     { kind: "route", href: "/how-it-works", label: t("footer.howItWorks") },

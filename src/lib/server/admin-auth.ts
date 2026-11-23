@@ -14,8 +14,13 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 const COOKIE_NAME = 'ilovedoc_admin'
 const SESSION_TTL_MS = 12 * 3_600_000
 
-/** Dev default password — the login screen shows a hint while it is active. */
+/** Dev default credentials — the login screen shows a hint while unset. */
+const DEFAULT_USERNAME = 'admin'
 const DEFAULT_PASSWORD = 'ilovedoc-admin'
+
+export function adminUsername(): string {
+  return process.env.ADMIN_USERNAME || DEFAULT_USERNAME
+}
 
 export function adminPassword(): string {
   return process.env.ADMIN_PASSWORD || DEFAULT_PASSWORD
@@ -23,6 +28,10 @@ export function adminPassword(): string {
 
 export function usingDefaultAdminPassword(): boolean {
   return !process.env.ADMIN_PASSWORD
+}
+
+export function usingDefaultAdminCredentials(): boolean {
+  return !process.env.ADMIN_PASSWORD || !process.env.ADMIN_USERNAME
 }
 
 function signingSecret(): string {
@@ -38,6 +47,18 @@ export function verifyAdminPassword(candidate: string): boolean {
   const a = createHash('sha256').update(candidate, 'utf8').digest()
   const b = createHash('sha256').update(adminPassword(), 'utf8').digest()
   return timingSafeEqual(a, b)
+}
+
+/** Timing-safe credentials check (username and password). */
+export function verifyAdminCredentials(
+  userCandidate: string,
+  passCandidate: string
+): boolean {
+  const userA = createHash('sha256').update(userCandidate.trim(), 'utf8').digest()
+  const userB = createHash('sha256').update(adminUsername().trim(), 'utf8').digest()
+  const passA = createHash('sha256').update(passCandidate, 'utf8').digest()
+  const passB = createHash('sha256').update(adminPassword(), 'utf8').digest()
+  return timingSafeEqual(userA, userB) && timingSafeEqual(passA, passB)
 }
 
 function sign(payload: string): string {

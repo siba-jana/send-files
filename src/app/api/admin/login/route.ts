@@ -5,8 +5,8 @@ import {
   adminCookieName,
   adminSessionMaxAgeSec,
   createAdminSessionToken,
-  usingDefaultAdminPassword,
-  verifyAdminPassword,
+  usingDefaultAdminCredentials,
+  verifyAdminCredentials,
 } from '@/lib/server/admin-auth'
 import { insertErrorLog } from '@/lib/server/error-log'
 
@@ -14,6 +14,7 @@ export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
 const loginSchema = z.object({
+  username: z.string().min(1).max(256).default('admin'),
   password: z.string().min(1).max(256),
 })
 
@@ -42,14 +43,14 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'invalid_body' }, { status: 400 })
   }
 
-  if (!verifyAdminPassword(parsed.data.password)) {
+  if (!verifyAdminCredentials(parsed.data.username, parsed.data.password)) {
     await insertErrorLog({
       level: 'warn',
       source: 'admin',
       message: 'Failed admin login attempt',
       ip,
-      url: '/?admin=1',
-      context: { reason: 'bad_password' },
+      url: '/admin',
+      context: { reason: 'bad_credentials', username: parsed.data.username },
     })
     return NextResponse.json({ error: 'invalid_credentials' }, { status: 401 })
   }
@@ -59,12 +60,13 @@ export async function POST(req: Request) {
     source: 'admin',
     message: 'Admin signed in',
     ip,
-    url: '/?admin=1',
+    url: '/admin',
+    context: { username: parsed.data.username },
   })
 
   const res = NextResponse.json({
     ok: true,
-    usingDefaultPassword: usingDefaultAdminPassword(),
+    usingDefaultPassword: usingDefaultAdminCredentials(),
   })
   res.cookies.set(adminCookieName(), createAdminSessionToken(), {
     httpOnly: true,

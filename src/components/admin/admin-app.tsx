@@ -14,15 +14,42 @@ import { AdminDashboard } from "@/components/admin/admin-dashboard";
  * API answers 401 (session expired) — adminFetch dispatches the
  * "ilovedoc:admin-unauthorized" window event.
  */
-export function AdminApp() {
-  const [phase, setPhase] = useState<"checking" | "anon" | "authed">("checking");
+export function AdminApp({
+  initialAuthenticated,
+  usingDefaultPassword,
+  initialUsername,
+}: {
+  initialAuthenticated?: boolean;
+  usingDefaultPassword?: boolean;
+  initialUsername?: string | null;
+} = {}) {
+  const [phase, setPhase] = useState<"checking" | "anon" | "authed">(
+    initialAuthenticated !== undefined
+      ? initialAuthenticated
+        ? "authed"
+        : "anon"
+      : "checking"
+  );
+  const [usingDefault, setUsingDefault] = useState<boolean | null>(
+    usingDefaultPassword ?? null
+  );
+  const [username, setUsername] = useState<string | null>(
+    initialUsername ?? null
+  );
 
   useEffect(() => {
+    if (initialAuthenticated !== undefined && initialUsername !== undefined) return;
     let cancelled = false;
     void (async () => {
       try {
         const session = await adminFetch<SessionResponse>("/api/admin/session");
-        if (!cancelled) setPhase(session.authenticated ? "authed" : "anon");
+        if (!cancelled) {
+          setUsingDefault(session.usingDefaultPassword);
+          if (session.username) {
+            setUsername(session.username);
+          }
+          setPhase(session.authenticated ? "authed" : "anon");
+        }
       } catch {
         if (!cancelled) setPhase("anon");
       }
@@ -30,7 +57,7 @@ export function AdminApp() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialAuthenticated, initialUsername]);
 
   useEffect(() => {
     const onUnauthorized = () => setPhase("anon");
@@ -38,8 +65,16 @@ export function AdminApp() {
     return () => window.removeEventListener("ilovedoc:admin-unauthorized", onUnauthorized);
   }, []);
 
-  const handleAuthenticated = useCallback(() => setPhase("authed"), []);
-  const handleSignedOut = useCallback(() => setPhase("anon"), []);
+  const handleAuthenticated = useCallback((user?: string) => {
+    if (user) {
+      setUsername(user);
+    }
+    setPhase("authed");
+  }, []);
+  const handleSignedOut = useCallback(() => {
+    setUsername(null);
+    setPhase("anon");
+  }, []);
 
   if (phase === "checking") {
     return (
@@ -56,8 +91,13 @@ export function AdminApp() {
   }
 
   if (phase === "anon") {
-    return <AdminLogin onAuthenticated={handleAuthenticated} />;
+    return (
+      <AdminLogin
+        onAuthenticated={handleAuthenticated}
+        usingDefaultPassword={usingDefault}
+      />
+    );
   }
 
-  return <AdminDashboard onSignedOut={handleSignedOut} />;
+  return <AdminDashboard onSignedOut={handleSignedOut} username={username} />;
 }

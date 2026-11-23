@@ -53,7 +53,13 @@ function getDarkSnapshot(): boolean {
   return document.documentElement.classList.contains("dark");
 }
 
-export function AdminDashboard({ onSignedOut }: { onSignedOut: () => void }) {
+export function AdminDashboard({
+  onSignedOut,
+  username,
+}: {
+  onSignedOut: () => void;
+  username?: string | null;
+}) {
   const [section, setSection] = useState<SectionId>("overview");
   const [signingOut, setSigningOut] = useState(false);
   const isDark = useSyncExternalStore(
@@ -98,6 +104,12 @@ export function AdminDashboard({ onSignedOut }: { onSignedOut: () => void }) {
           >
             Admin console
           </Badge>
+          {username && (
+            <div className="hidden items-center gap-1.5 rounded-full border border-border/60 bg-muted/40 px-2.5 py-1 text-xs font-medium sm:flex">
+              <span className="size-1.5 rounded-full bg-rose-500" />
+              <span className="text-muted-foreground">{username}</span>
+            </div>
+          )}
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
             <span className="hidden items-center gap-2 text-xs text-muted-foreground md:flex">
