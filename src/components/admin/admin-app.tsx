@@ -14,15 +14,34 @@ import { AdminDashboard } from "@/components/admin/admin-dashboard";
  * API answers 401 (session expired) — adminFetch dispatches the
  * "ilovedoc:admin-unauthorized" window event.
  */
-export function AdminApp() {
-  const [phase, setPhase] = useState<"checking" | "anon" | "authed">("checking");
+export function AdminApp({
+  initialAuthenticated,
+  usingDefaultPassword,
+}: {
+  initialAuthenticated?: boolean;
+  usingDefaultPassword?: boolean;
+} = {}) {
+  const [phase, setPhase] = useState<"checking" | "anon" | "authed">(
+    initialAuthenticated !== undefined
+      ? initialAuthenticated
+        ? "authed"
+        : "anon"
+      : "checking"
+  );
+  const [usingDefault, setUsingDefault] = useState<boolean | null>(
+    usingDefaultPassword ?? null
+  );
 
   useEffect(() => {
+    if (initialAuthenticated !== undefined) return;
     let cancelled = false;
     void (async () => {
       try {
         const session = await adminFetch<SessionResponse>("/api/admin/session");
-        if (!cancelled) setPhase(session.authenticated ? "authed" : "anon");
+        if (!cancelled) {
+          setUsingDefault(session.usingDefaultPassword);
+          setPhase(session.authenticated ? "authed" : "anon");
+        }
       } catch {
         if (!cancelled) setPhase("anon");
       }
@@ -30,7 +49,7 @@ export function AdminApp() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [initialAuthenticated]);
 
   useEffect(() => {
     const onUnauthorized = () => setPhase("anon");
@@ -56,7 +75,12 @@ export function AdminApp() {
   }
 
   if (phase === "anon") {
-    return <AdminLogin onAuthenticated={handleAuthenticated} />;
+    return (
+      <AdminLogin
+        onAuthenticated={handleAuthenticated}
+        usingDefaultPassword={usingDefault}
+      />
+    );
   }
 
   return <AdminDashboard onSignedOut={handleSignedOut} />;

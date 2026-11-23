@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import { ArrowLeft, Eye, EyeOff, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -12,12 +13,26 @@ import { adminFetch } from "@/components/admin/admin-api";
  * Admin console sign-in. Single password (ADMIN_PASSWORD env on the server,
  * dev default with an on-screen hint while unset).
  */
-export function AdminLogin({ onAuthenticated }: { onAuthenticated: () => void }) {
+export function AdminLogin({
+  onAuthenticated,
+  usingDefaultPassword,
+}: {
+  onAuthenticated: () => void;
+  usingDefaultPassword?: boolean | null;
+}) {
   const [password, setPassword] = useState("");
   const [reveal, setReveal] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [usingDefault, setUsingDefault] = useState<boolean | null>(null);
+  const [usingDefault, setUsingDefault] = useState<boolean | null>(
+    usingDefaultPassword ?? null
+  );
+
+  useEffect(() => {
+    if (usingDefaultPassword !== undefined && usingDefaultPassword !== null) {
+      setUsingDefault(usingDefaultPassword);
+    }
+  }, [usingDefaultPassword]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -115,7 +130,7 @@ export function AdminLogin({ onAuthenticated }: { onAuthenticated: () => void })
             </Button>
           </form>
 
-          {(usingDefault ?? true) && (
+          {usingDefault === true && (
             <p className="mt-5 rounded-xl bg-amber-500/10 px-3 py-2.5 text-xs leading-relaxed text-amber-700 dark:text-amber-400">
               Sandbox default password:{" "}
               <code className="rounded bg-amber-500/15 px-1 py-0.5 font-mono">ilovedoc-admin</code>
@@ -126,13 +141,13 @@ export function AdminLogin({ onAuthenticated }: { onAuthenticated: () => void })
         </div>
 
         <p className="mt-6 text-center">
-          <a
+          <Link
             href="/"
             className="inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft aria-hidden="true" className="size-4" />
             Back to ilovedoc.org
-          </a>
+          </Link>
         </p>
       </div>
     </main>

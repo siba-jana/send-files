@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { SiteHeader } from "@/components/site/header";
 import { ToolHeader } from "@/components/site/tool-header";
 import { CleanHash } from "@/components/site/clean-hash";
@@ -10,7 +10,6 @@ import { SecuritySection } from "@/components/site/security-section";
 import { Faq } from "@/components/site/faq";
 import { FAQS } from "@/components/site/faq-data";
 import { Footer } from "@/components/site/footer";
-import { AdminApp } from "@/components/admin/admin-app";
 import { I18nProvider } from "@/i18n/context";
 import {
   DEFAULT_LOCALE,
@@ -192,7 +191,7 @@ export default async function LocalizedFilesTransferOnline({
   const isPrivateTransfer = Boolean(sParams.t || sParams.code);
 
   if (sParams.admin !== undefined) {
-    return <AdminApp />;
+    redirect(`/${locale}/admin`);
   }
 
   return (

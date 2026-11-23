@@ -13,6 +13,9 @@ export default async function RootPage({
     savedLocale && isSupportedLocale(savedLocale) ? savedLocale : DEFAULT_LOCALE;
 
   const params = await searchParams;
+  if (params.admin !== undefined) {
+    redirect(`/${locale}/admin`);
+  }
   const qs = new URLSearchParams();
   for (const [key, val] of Object.entries(params)) {
     if (typeof val === "string") qs.set(key, val);

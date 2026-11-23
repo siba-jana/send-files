@@ -6,7 +6,6 @@ import { ToolsGrid } from "@/components/site/tools-grid";
 import { StatsStrip } from "@/components/site/stats-strip";
 import { Faq, HUB_FAQS } from "@/components/site/faq";
 import { Footer } from "@/components/site/footer";
-import { AdminApp } from "@/components/admin/admin-app";
 import { I18nProvider } from "@/i18n/context";
 import {
   DEFAULT_LOCALE,
@@ -99,6 +98,7 @@ export async function generateMetadata({
 
   if (isPrivateView) {
     return {
+      title: sParams.admin !== undefined ? "Admin Console — I Love Doc" : undefined,
       robots: {
         index: false,
         follow: false,
@@ -182,7 +182,7 @@ export default async function LocalizedHome({
   const sParams = await searchParams;
 
   if (sParams.admin !== undefined) {
-    return <AdminApp />;
+    redirect(`/${locale}/admin`);
   }
 
   // If a share token or code is opened on the homepage, redirect to the dedicated transfer tool

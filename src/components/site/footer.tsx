@@ -36,7 +36,7 @@ export function Footer() {
               © {year} {t("footer.copyright")}
             </p>
             <a
-              href="/?admin=1"
+              href="/admin"
               className="inline-flex items-center gap-1 text-xs text-muted-foreground/50 transition-colors hover:text-muted-foreground"
             >
               <svg

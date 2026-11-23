@@ -71,22 +71,27 @@ export async function GET(req: Request) {
       signaling,
       serverLog,
     ] = await Promise.all([
-      db.transfer.groupBy({ by: ['status'], _count: true }),
-      db.transferFile.aggregate({ _count: true, _sum: { size: true } }),
+      db.transfer.groupBy({ by: ['status'], _count: true }).catch(() => []),
+      db.transferFile.aggregate({ _count: true, _sum: { size: true } }).catch(() => ({ _count: 0, _sum: { size: null } })),
       db.transfer.findMany({
         where: { createdAt: { gte: new Date(dayAgo) } },
         select: { createdAt: true },
-      }),
+      }).catch(() => []),
       db.transferEvent.findMany({
         where: { eventType: 'completed', createdAt: { gte: new Date(dayAgo) } },
         select: { createdAt: true },
-      }),
+      }).catch(() => []),
       db.transferEvent.findMany({
         orderBy: { createdAt: 'desc' },
         take: 14,
         include: { transfer: { select: { publicToken: true, status: true } } },
-      }),
-      readStatsCounters(),
+      }).catch(() => []),
+      readStatsCounters().catch(() => ({
+        transfersCreated: BigInt(0),
+        deliveriesCompleted: BigInt(0),
+        filesDelivered: BigInt(0),
+        bytesDelivered: BigInt(0),
+      })),
       errorLogStats(),
       signalingSnapshot(),
       serverLogTail(),
